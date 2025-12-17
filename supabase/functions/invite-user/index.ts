@@ -94,7 +94,7 @@ serve(async (req: Request): Promise<Response> => {
     };
 
     const { error: emailError } = await resend.emails.send({
-      from: "Clairmont <onboarding@resend.dev>",
+      from: "Clairmont Advisory <noreply@tax.clairmont-advisory.com>",
       to: [email],
       subject: "Ihre Einladung zum Clairmont Dashboard",
       html: `
