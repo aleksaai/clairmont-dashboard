@@ -21,7 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Plus, Upload, FileText, ChevronRight, Folder } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
-type CaseStatus = 'neu' | 'bezahlt' | 'in_bearbeitung' | 'abgeschlossen' | 'einspruch';
+type CaseStatus = 'neu' | 'bezahlt' | 'in_bearbeitung' | 'abgeschlossen' | 'einspruch' | 'anfrage_eingegangen' | 'prognose_erstellt' | 'angebot_gesendet' | 'anzahlung_erhalten' | 'einspruch_nacharbeit';
 type ProductType = 'steuern' | 'kredit' | 'versicherung';
 
 interface FolderData {
@@ -43,25 +43,29 @@ interface Document {
   created_at: string;
 }
 
+// Status options per product
+const productStatuses: Record<ProductType, CaseStatus[]> = {
+  steuern: ['anfrage_eingegangen', 'prognose_erstellt', 'angebot_gesendet', 'anzahlung_erhalten', 'in_bearbeitung', 'abgeschlossen', 'einspruch_nacharbeit'],
+  kredit: ['neu', 'bezahlt', 'in_bearbeitung', 'abgeschlossen', 'einspruch'],
+  versicherung: ['neu', 'bezahlt', 'in_bearbeitung', 'abgeschlossen', 'einspruch'],
+};
+
 const statusLabels: Record<CaseStatus, string> = {
   neu: 'Neu / Anfrage',
   bezahlt: 'Bezahlt',
   in_bearbeitung: 'In Bearbeitung',
   abgeschlossen: 'Abgeschlossen',
   einspruch: 'Einspruch',
-};
-
-const statusColors: Record<CaseStatus, string> = {
-  neu: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  bezahlt: 'bg-green-500/20 text-green-400 border-green-500/30',
-  in_bearbeitung: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  abgeschlossen: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  einspruch: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  anfrage_eingegangen: 'Anfrage eingegangen',
+  prognose_erstellt: 'Prognose erstellt',
+  angebot_gesendet: 'Angebot gesendet',
+  anzahlung_erhalten: 'Anzahlung erhalten',
+  einspruch_nacharbeit: 'Einspruch / Nacharbeit',
 };
 
 const productConfig: Record<ProductType, { label: string; color: string; bgColor: string }> = {
   steuern: { 
-    label: 'Steuererklärung', 
+    label: 'Steuerfälle', 
     color: 'text-blue-400',
     bgColor: 'bg-blue-500/20 border-blue-500/30'
   },
@@ -72,12 +76,11 @@ const productConfig: Record<ProductType, { label: string; color: string; bgColor
   },
   versicherung: { 
     label: 'Versicherung', 
-    color: 'text-green-400',
-    bgColor: 'bg-green-500/20 border-green-500/30'
+    color: 'text-emerald-400',
+    bgColor: 'bg-emerald-500/20 border-emerald-500/30'
   },
 };
 
-const allStatuses: CaseStatus[] = ['neu', 'bezahlt', 'in_bearbeitung', 'abgeschlossen', 'einspruch'];
 const allProducts: ProductType[] = ['steuern', 'kredit', 'versicherung'];
 
 export function OrdnerView() {
@@ -497,20 +500,21 @@ export function OrdnerView() {
         </div>
 
         {/* Status Folders Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {allStatuses.map((status) => {
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {productStatuses[selectedProduct].map((status) => {
             const count = getStatusCount(status);
+            const config = productConfig[selectedProduct];
             return (
               <div
                 key={status}
                 onClick={() => setSelectedStatus(status)}
-                className={`border rounded-xl p-4 cursor-pointer hover:scale-[1.02] transition-all ${statusColors[status]}`}
+                className={`border rounded-xl p-4 cursor-pointer hover:scale-[1.02] transition-all ${config.bgColor}`}
               >
                 <div className="aspect-square rounded-lg mb-3 flex items-center justify-center bg-background/20">
-                  <Folder className="w-12 h-12" />
+                  <Folder className={`w-12 h-12 ${config.color}`} />
                 </div>
-                <p className="text-sm font-medium truncate">{statusLabels[status]}</p>
-                <p className="text-xs opacity-70">
+                <p className={`text-sm font-medium truncate ${config.color}`}>{statusLabels[status]}</p>
+                <p className="text-xs text-muted-foreground">
                   {count} {count === 1 ? 'Ordner' : 'Ordner'}
                 </p>
               </div>

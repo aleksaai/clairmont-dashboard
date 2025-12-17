@@ -207,6 +207,11 @@ export type Database = {
         | "in_bearbeitung"
         | "abgeschlossen"
         | "einspruch"
+        | "anfrage_eingegangen"
+        | "prognose_erstellt"
+        | "angebot_gesendet"
+        | "anzahlung_erhalten"
+        | "einspruch_nacharbeit"
       product_type: "steuern" | "kredit" | "versicherung"
     }
     CompositeTypes: {
@@ -342,6 +347,11 @@ export const Constants = {
         "in_bearbeitung",
         "abgeschlossen",
         "einspruch",
+        "anfrage_eingegangen",
+        "prognose_erstellt",
+        "angebot_gesendet",
+        "anzahlung_erhalten",
+        "einspruch_nacharbeit",
       ],
       product_type: ["steuern", "kredit", "versicherung"],
     },
