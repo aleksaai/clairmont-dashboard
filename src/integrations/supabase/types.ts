@@ -14,6 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
+      documents: {
+        Row: {
+          created_at: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          folder_id: string
+          id: string
+          name: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          folder_id: string
+          id?: string
+          name: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          folder_id?: string
+          id?: string
+          name?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          customer_email: string | null
+          customer_name: string
+          id: string
+          name: string
+          partner_code: string | null
+          product: Database["public"]["Enums"]["product_type"]
+          status: Database["public"]["Enums"]["case_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          customer_email?: string | null
+          customer_name: string
+          id?: string
+          name: string
+          partner_code?: string | null
+          product?: Database["public"]["Enums"]["product_type"]
+          status?: Database["public"]["Enums"]["case_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          customer_email?: string | null
+          customer_name?: string
+          id?: string
+          name?: string
+          partner_code?: string | null
+          product?: Database["public"]["Enums"]["product_type"]
+          status?: Database["public"]["Enums"]["case_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_codes: {
         Row: {
           code: string
@@ -96,6 +201,13 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "sachbearbeiter" | "vertriebler"
+      case_status:
+        | "neu"
+        | "bezahlt"
+        | "in_bearbeitung"
+        | "abgeschlossen"
+        | "einspruch"
+      product_type: "steuern" | "kredit" | "versicherung"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -224,6 +336,14 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "sachbearbeiter", "vertriebler"],
+      case_status: [
+        "neu",
+        "bezahlt",
+        "in_bearbeitung",
+        "abgeschlossen",
+        "einspruch",
+      ],
+      product_type: ["steuern", "kredit", "versicherung"],
     },
   },
 } as const
