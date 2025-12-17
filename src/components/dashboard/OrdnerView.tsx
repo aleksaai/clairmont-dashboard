@@ -71,7 +71,7 @@ const productConfig: Record<ProductType, { label: string; color: string; bgColor
     bgColor: 'bg-blue-500/20 border-blue-500/30'
   },
   versicherung: { 
-    label: 'Versicherungsfälle', 
+    label: 'Baufinanzierungsfälle', 
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/20 border-emerald-500/30'
   },
