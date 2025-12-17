@@ -425,9 +425,11 @@ export function OrdnerView() {
           {selectedFolder.customer_email && (
             <p className="text-sm text-muted-foreground">{selectedFolder.customer_email}</p>
           )}
-          <p className="text-xs text-muted-foreground mt-1">
-            Erstellt: {new Date(selectedFolder.created_at).toLocaleDateString('de-DE')}
-          </p>
+          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+            <span>Erstellt: {new Date(selectedFolder.created_at).toLocaleDateString('de-DE')}</span>
+            <span className="text-muted-foreground/50">|</span>
+            <span>Partnercode: {selectedFolder.partner_code || '—'}</span>
+          </div>
         </div>
 
         {/* Documents Grid */}
