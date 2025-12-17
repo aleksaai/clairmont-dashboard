@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Upload, FileText, ChevronRight, Folder } from 'lucide-react';
+import { Plus, Upload, FileText, ChevronRight, Folder, Image, FileSpreadsheet, FileType, File, FileVideo, FileAudio, FileArchive, FileCode, Presentation } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 type CaseStatus = 'neu' | 'bezahlt' | 'in_bearbeitung' | 'abgeschlossen' | 'einspruch' | 'anfrage_eingegangen' | 'prognose_erstellt' | 'angebot_gesendet' | 'anzahlung_erhalten' | 'einspruch_nacharbeit';
@@ -82,6 +82,50 @@ const productConfig: Record<ProductType, { label: string; color: string; bgColor
 };
 
 const allProducts: ProductType[] = ['steuern', 'versicherung', 'kredit'];
+
+// Get icon based on file type
+const getFileIcon = (fileType: string | null) => {
+  const type = fileType?.toLowerCase() || '';
+  
+  // Images
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(type)) {
+    return { Icon: Image, color: 'text-green-500' };
+  }
+  // PDF
+  if (type === 'pdf') {
+    return { Icon: FileText, color: 'text-red-500' };
+  }
+  // Word documents
+  if (['doc', 'docx', 'odt', 'rtf'].includes(type)) {
+    return { Icon: FileType, color: 'text-blue-500' };
+  }
+  // Spreadsheets
+  if (['xls', 'xlsx', 'csv', 'ods'].includes(type)) {
+    return { Icon: FileSpreadsheet, color: 'text-emerald-500' };
+  }
+  // Presentations
+  if (['ppt', 'pptx', 'odp'].includes(type)) {
+    return { Icon: Presentation, color: 'text-orange-500' };
+  }
+  // Video
+  if (['mp4', 'avi', 'mov', 'mkv', 'webm', 'wmv'].includes(type)) {
+    return { Icon: FileVideo, color: 'text-purple-500' };
+  }
+  // Audio
+  if (['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(type)) {
+    return { Icon: FileAudio, color: 'text-pink-500' };
+  }
+  // Archives
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(type)) {
+    return { Icon: FileArchive, color: 'text-yellow-500' };
+  }
+  // Code files
+  if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'json', 'xml', 'py', 'java', 'php'].includes(type)) {
+    return { Icon: FileCode, color: 'text-cyan-500' };
+  }
+  // Default
+  return { Icon: File, color: 'text-muted-foreground' };
+};
 
 export function OrdnerView() {
   const { user } = useAuth();
@@ -377,21 +421,24 @@ export function OrdnerView() {
 
         {/* Documents Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {documents.map((doc) => (
-            <div
-              key={doc.id}
-              onClick={() => downloadDocument(doc)}
-              className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4 cursor-pointer hover:bg-card/60 transition-all"
-            >
-              <div className="flex items-center justify-center h-16 mb-3">
-                <FileText className="w-10 h-10 text-primary/60" />
+          {documents.map((doc) => {
+            const { Icon, color } = getFileIcon(doc.file_type);
+            return (
+              <div
+                key={doc.id}
+                onClick={() => downloadDocument(doc)}
+                className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4 cursor-pointer hover:bg-card/60 transition-all"
+              >
+                <div className="flex items-center justify-center h-16 mb-3">
+                  <Icon className={`w-10 h-10 ${color}`} />
+                </div>
+                <p className="text-sm font-medium text-foreground truncate">{doc.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(doc.created_at).toLocaleDateString('de-DE')}
+                </p>
               </div>
-              <p className="text-sm font-medium text-foreground truncate">{doc.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(doc.created_at).toLocaleDateString('de-DE')}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {documents.length === 0 && (
