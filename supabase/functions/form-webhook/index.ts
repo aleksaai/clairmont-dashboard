@@ -10,14 +10,29 @@ interface FileData {
   name: string;
   type: string;
   data: string; // Base64 encoded
+  category?: string;
+}
+
+interface PdfContent {
+  name: string;
+  type: string;
+  data: string; // Base64 encoded
+}
+
+interface FormData {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  [key: string]: unknown;
 }
 
 interface WebhookPayload {
-  customer_name: string;
-  customer_email?: string;
-  form_pdf: string; // Base64 encoded PDF
+  formType?: string;
+  submittedAt?: string;
+  formData: FormData;
+  pdfContent: PdfContent;
   files?: FileData[];
-  partner_code?: string;
+  documentUrls?: Record<string, string[]>;
 }
 
 serve(async (req) => {
@@ -50,13 +65,18 @@ serve(async (req) => {
 
     // Parse request body
     const payload: WebhookPayload = await req.json();
-    console.log('Received webhook payload for customer:', payload.customer_name);
+    
+    // Extract customer data from Clermont format
+    const customerName = `${payload.formData?.firstName || ''} ${payload.formData?.lastName || ''}`.trim();
+    const customerEmail = payload.formData?.email || null;
+    
+    console.log('Received webhook payload for customer:', customerName);
 
     // Validate required fields
-    if (!payload.customer_name || !payload.form_pdf) {
-      console.error('Missing required fields: customer_name or form_pdf');
+    if (!payload.formData?.firstName || !payload.formData?.lastName || !payload.pdfContent?.data) {
+      console.error('Missing required fields: formData.firstName, formData.lastName, or pdfContent.data');
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: customer_name and form_pdf are required' }),
+        JSON.stringify({ error: 'Missing required fields: formData (firstName, lastName) and pdfContent.data are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -68,7 +88,7 @@ serve(async (req) => {
 
     // Create folder name from customer name and timestamp
     const timestamp = new Date().toISOString().split('T')[0];
-    const folderName = `${payload.customer_name} - ${timestamp}`;
+    const folderName = `${customerName} - ${timestamp}`;
 
     // Create new folder in "Steuern" -> "Anfrage eingegangen"
     console.log('Creating folder:', folderName);
@@ -76,11 +96,11 @@ serve(async (req) => {
       .from('folders')
       .insert({
         name: folderName,
-        customer_name: payload.customer_name,
-        customer_email: payload.customer_email || null,
+        customer_name: customerName,
+        customer_email: customerEmail,
         product: 'steuern',
         status: 'anfrage_eingegangen',
-        partner_code: payload.partner_code || null,
+        partner_code: null,
         created_by: null, // System upload
       })
       .select()
@@ -96,12 +116,12 @@ serve(async (req) => {
 
     console.log('Folder created with ID:', folder.id);
 
-    // Upload form PDF
-    const pdfFileName = `Formular_${payload.customer_name.replace(/\s+/g, '_')}_${timestamp}.pdf`;
+    // Upload form PDF using pdfContent from Clermont format
+    const pdfFileName = payload.pdfContent.name || `Formular_${customerName.replace(/\s+/g, '_')}_${timestamp}.pdf`;
     const pdfPath = `${folder.id}/${pdfFileName}`;
     
     // Decode base64 PDF
-    const pdfData = Uint8Array.from(atob(payload.form_pdf), c => c.charCodeAt(0));
+    const pdfData = Uint8Array.from(atob(payload.pdfContent.data), c => c.charCodeAt(0));
     
     console.log('Uploading form PDF:', pdfFileName);
     const { error: pdfUploadError } = await supabase.storage
