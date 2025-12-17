@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
+import { UserAvatar } from '@/components/UserAvatar';
 
 interface ChatContact {
   id: string;
   name: string;
+  avatarUrl?: string | null;
   lastMessage: string;
   timestamp: string;
   unread?: number;
@@ -33,13 +35,6 @@ const mockMessages: Message[] = [
   { id: '4', senderId: 'me', content: 'Super, ich schaue mir das gleich an.', timestamp: '14:30', isOwn: true },
 ];
 
-const getInitials = (name: string) => {
-  const parts = name.trim().split(' ');
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-  return name.substring(0, 2).toUpperCase();
-};
 
 export function ChatsListe() {
   const [selectedChat, setSelectedChat] = useState<string | null>('1');
@@ -83,11 +78,11 @@ export function ChatsListe() {
             >
               {/* Avatar */}
               <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-primary/30 flex items-center justify-center">
-                  <span className="text-sm font-medium text-foreground">
-                    {getInitials(contact.name)}
-                  </span>
-                </div>
+                <UserAvatar 
+                  avatarUrl={contact.avatarUrl} 
+                  fullName={contact.name} 
+                  size="md"
+                />
                 {contact.online && (
                   <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-card" />
                 )}
@@ -119,11 +114,11 @@ export function ChatsListe() {
           <>
             {/* Chat Header */}
             <div className="h-14 px-4 border-b border-border bg-card/50 backdrop-blur-sm flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-primary/30 flex items-center justify-center">
-                <span className="text-sm font-medium text-foreground">
-                  {getInitials(selectedContact.name)}
-                </span>
-              </div>
+              <UserAvatar 
+                avatarUrl={selectedContact.avatarUrl} 
+                fullName={selectedContact.name} 
+                size="sm"
+              />
               <div>
                 <p className="text-sm font-medium text-foreground">{selectedContact.name}</p>
                 <p className="text-xs text-muted-foreground">
