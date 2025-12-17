@@ -488,8 +488,9 @@ export function OrdnerView() {
     );
   }
 
-  // EBENE 2: Status-Ordner für ausgewähltes Produkt
+  // EBENE 2: Status-Liste für ausgewähltes Produkt
   if (selectedProduct) {
+    const config = productConfig[selectedProduct];
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -499,24 +500,29 @@ export function OrdnerView() {
           {renderBreadcrumb()}
         </div>
 
-        {/* Status Folders Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {productStatuses[selectedProduct].map((status) => {
+        {/* Status List */}
+        <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl overflow-hidden">
+          {productStatuses[selectedProduct].map((status, index) => {
             const count = getStatusCount(status);
-            const config = productConfig[selectedProduct];
+            const isLast = index === productStatuses[selectedProduct].length - 1;
             return (
               <div
                 key={status}
                 onClick={() => setSelectedStatus(status)}
-                className={`border rounded-xl p-4 cursor-pointer hover:scale-[1.02] transition-all ${config.bgColor}`}
+                className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-all ${!isLast ? 'border-b border-border/50' : ''}`}
               >
-                <div className="aspect-square rounded-lg mb-3 flex items-center justify-center bg-background/20">
-                  <Folder className={`w-12 h-12 ${config.color}`} />
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${config.bgColor}`}>
+                    <Folder className={`w-5 h-5 ${config.color}`} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">{statusLabels[status]}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {count} {count === 1 ? 'Kundenordner' : 'Kundenordner'}
+                    </p>
+                  </div>
                 </div>
-                <p className={`text-sm font-medium truncate ${config.color}`}>{statusLabels[status]}</p>
-                <p className="text-xs text-muted-foreground">
-                  {count} {count === 1 ? 'Ordner' : 'Ordner'}
-                </p>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </div>
             );
           })}
