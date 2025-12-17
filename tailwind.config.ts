@@ -57,28 +57,39 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        glass: {
+          bg: "hsl(var(--glass-bg))",
+          border: "hsl(var(--glass-border))",
+        },
+        status: {
+          new: "hsl(var(--status-new))",
+          paid: "hsl(var(--status-paid))",
+          progress: "hsl(var(--status-progress))",
+          done: "hsl(var(--status-done))",
+          appeal: "hsl(var(--status-appeal))",
+        },
+        product: {
+          tax: "hsl(var(--product-tax))",
+          credit: "hsl(var(--product-credit))",
+          insurance: "hsl(var(--product-insurance))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      backdropBlur: {
+        glass: "var(--glass-blur)",
+      },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {
