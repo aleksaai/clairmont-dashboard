@@ -23,7 +23,7 @@ export type Database = {
           folder_id: string
           id: string
           name: string
-          uploaded_by: string
+          uploaded_by: string | null
         }
         Insert: {
           created_at?: string
@@ -33,7 +33,7 @@ export type Database = {
           folder_id: string
           id?: string
           name: string
-          uploaded_by: string
+          uploaded_by?: string | null
         }
         Update: {
           created_at?: string
@@ -43,7 +43,7 @@ export type Database = {
           folder_id?: string
           id?: string
           name?: string
-          uploaded_by?: string
+          uploaded_by?: string | null
         }
         Relationships: [
           {
@@ -66,7 +66,7 @@ export type Database = {
         Row: {
           assigned_to: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           customer_email: string | null
           customer_name: string
           id: string
@@ -79,7 +79,7 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           customer_email?: string | null
           customer_name: string
           id?: string
@@ -92,7 +92,7 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           customer_email?: string | null
           customer_name?: string
           id?: string
