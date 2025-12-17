@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useMessageNotifications } from '@/hooks/useMessageNotifications';
 import { Header } from '@/components/layout/Header';
 import { OrdnerView } from '@/components/dashboard/OrdnerView';
 import { ChatsListe } from '@/components/dashboard/ChatsListe';
@@ -14,6 +15,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeSection, setActiveSection] = useState('ordner');
+  const { unreadCount } = useMessageNotifications(user?.id);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -75,7 +77,8 @@ export default function Dashboard() {
         avatarUrl={profile?.avatar_url}
         activeSection={activeSection}
         onSectionChange={setActiveSection}
-        onSignOut={handleSignOut} 
+        onSignOut={handleSignOut}
+        unreadMessageCount={unreadCount}
       />
       
       <main className="flex-1 p-6 overflow-auto">
