@@ -278,17 +278,43 @@ export function OrdnerView() {
 
   // Render breadcrumb navigation
   const renderBreadcrumb = () => {
+    const handleBreadcrumbClick = (index: number) => {
+      if (index === 0) {
+        // "Drive" - zurück zur Produktauswahl
+        setSelectedProduct(null);
+        setSelectedStatus(null);
+        setSelectedFolder(null);
+        setDocuments([]);
+      } else if (index === 1 && selectedProduct) {
+        // Produkt (z.B. "Steuerfälle") - zurück zur Status-Liste
+        setSelectedStatus(null);
+        setSelectedFolder(null);
+        setDocuments([]);
+      } else if (index === 2 && selectedStatus) {
+        // Status - zurück zur Kundenordner-Liste
+        setSelectedFolder(null);
+        setDocuments([]);
+      }
+    };
+
     const parts = getBreadcrumb();
     return (
       <div className="flex items-center gap-2 text-sm">
-        {parts.map((part, index) => (
-          <div key={index} className="flex items-center gap-2">
-            {index > 0 && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-            <span className={index === parts.length - 1 ? 'text-foreground font-medium' : 'text-muted-foreground'}>
-              {part}
-            </span>
-          </div>
-        ))}
+        {parts.map((part, index) => {
+          const isLast = index === parts.length - 1;
+          const isClickable = !isLast;
+          return (
+            <div key={index} className="flex items-center gap-2">
+              {index > 0 && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+              <span 
+                onClick={() => isClickable && handleBreadcrumbClick(index)}
+                className={`${isLast ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground cursor-pointer transition-colors'}`}
+              >
+                {part}
+              </span>
+            </div>
+          );
+        })}
       </div>
     );
   };
