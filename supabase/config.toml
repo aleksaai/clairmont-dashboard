@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.insurance-webhook]
 verify_jwt = false
+
+[functions.credit-webhook]
+verify_jwt = false
