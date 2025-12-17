@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Mail, User, Shield } from 'lucide-react';
+import { UserPlus, Mail, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { UserAvatar } from '@/components/UserAvatar';
 import { useAuth, AppRole } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
@@ -15,6 +16,7 @@ interface TeamMember {
   id: string;
   email: string;
   full_name: string | null;
+  avatar_url: string | null;
   role: AppRole;
   created_at: string;
 }
@@ -43,7 +45,7 @@ export function TeamView() {
     try {
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, full_name, created_at');
+        .select('id, email, full_name, avatar_url, created_at');
 
       if (profilesError) throw profilesError;
 
@@ -59,6 +61,7 @@ export function TeamView() {
           id: profile.id,
           email: profile.email,
           full_name: profile.full_name,
+          avatar_url: profile.avatar_url,
           role: (userRole?.role as AppRole) || 'vertriebler',
           created_at: profile.created_at || '',
         };
@@ -249,9 +252,11 @@ export function TeamView() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-5 w-5 text-primary" />
-                      </div>
+                      <UserAvatar 
+                        avatarUrl={member.avatar_url} 
+                        fullName={member.full_name} 
+                        size="md"
+                      />
                       <div>
                         <p className="font-medium text-foreground">
                           {member.full_name || 'Kein Name'}
