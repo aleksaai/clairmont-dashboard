@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { OrdnerView } from '@/components/dashboard/OrdnerView';
 import { ChatsListe } from '@/components/dashboard/ChatsListe';
@@ -58,20 +57,18 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+    <div className="min-h-screen bg-background flex flex-col">
+      <Header 
+        userEmail={user?.email} 
+        userRole={role}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        onSignOut={handleSignOut} 
+      />
       
-      <div className="flex-1 flex flex-col">
-        <Header 
-          userEmail={user?.email} 
-          userRole={role} 
-          onSignOut={handleSignOut} 
-        />
-        
-        <main className="flex-1 p-6 overflow-auto">
-          {renderContent()}
-        </main>
-      </div>
+      <main className="flex-1 p-6 overflow-auto">
+        {renderContent()}
+      </main>
     </div>
   );
 }
