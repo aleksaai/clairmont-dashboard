@@ -129,7 +129,12 @@ serve(async (req: Request): Promise<Response> => {
             <p style="margin: 5px 0;"><strong>Rolle:</strong> ${roleNames[role]}</p>
             ${partnerCodeHtml}
           </div>
-          <p>Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://app.clairmont-advisory.com" style="display: inline-block; background-color: #0f172a; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              Jetzt anmelden
+            </a>
+          </div>
+          <p style="color: #666; font-size: 14px;">Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.</p>
           <p style="margin-top: 30px;">Mit freundlichen Grüßen,<br>Das Clairmont Team</p>
         </div>
       `,
