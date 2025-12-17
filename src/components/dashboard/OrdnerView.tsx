@@ -62,13 +62,13 @@ const statusColors: Record<CaseStatus, string> = {
 const productConfig: Record<ProductType, { label: string; color: string; bgColor: string }> = {
   steuern: { 
     label: 'Steuererklärung', 
-    color: 'text-red-400',
-    bgColor: 'bg-red-500/20 border-red-500/30'
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/20 border-blue-500/30'
   },
   kredit: { 
     label: 'Kredit', 
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/20 border-blue-500/30'
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/20 border-red-500/30'
   },
   versicherung: { 
     label: 'Versicherung', 
