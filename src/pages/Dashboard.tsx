@@ -9,7 +9,7 @@ import { TeamView } from '@/components/dashboard/TeamView';
 import { EinstellungenView } from '@/components/dashboard/EinstellungenView';
 
 export default function Dashboard() {
-  const { user, role, loading, signOut } = useAuth();
+  const { user, role, profile, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeSection, setActiveSection] = useState('ordner');
@@ -59,7 +59,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header 
-        userEmail={user?.email} 
+        userName={profile?.full_name ?? null}
         userRole={role}
         activeSection={activeSection}
         onSectionChange={setActiveSection}
