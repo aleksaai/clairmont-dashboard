@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Settings, LogOut } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 interface HeaderProps {
   userName: string | null;
@@ -50,9 +51,12 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
     <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-6">
       {/* Left: Logo + Navigation */}
       <div className="flex items-center gap-8">
-        <h1 className="text-lg font-semibold text-foreground tracking-tight">
-          Clairmont
-        </h1>
+        <div className="flex items-center gap-2">
+          <img src={logo} alt="Clairmont Advisory" className="h-7 w-auto" />
+          <span className="text-lg font-semibold text-foreground tracking-tight">
+            Clairmont Advisory
+          </span>
+        </div>
         
         <nav className="flex items-center gap-1">
           {navItems.map((item) => (
