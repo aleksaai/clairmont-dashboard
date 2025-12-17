@@ -9,7 +9,7 @@ import { TeamView } from '@/components/dashboard/TeamView';
 import { EinstellungenView } from '@/components/dashboard/EinstellungenView';
 
 export default function Dashboard() {
-  const { user, role, profile, loading, signOut } = useAuth();
+  const { user, role, profile, loading, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeSection, setActiveSection] = useState('ordner');
@@ -50,7 +50,15 @@ export default function Dashboard() {
       case 'team':
         return <TeamView />;
       case 'einstellungen':
-        return <EinstellungenView />;
+        return (
+          <EinstellungenView 
+            userName={profile?.full_name ?? null}
+            userEmail={user?.email}
+            avatarUrl={profile?.avatar_url}
+            userId={user?.id}
+            onProfileUpdate={refreshProfile}
+          />
+        );
       default:
         return <OrdnerView />;
     }
@@ -61,6 +69,7 @@ export default function Dashboard() {
       <Header 
         userName={profile?.full_name ?? null}
         userRole={role}
+        avatarUrl={profile?.avatar_url}
         activeSection={activeSection}
         onSectionChange={setActiveSection}
         onSignOut={handleSignOut} 

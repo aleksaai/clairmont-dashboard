@@ -6,7 +6,7 @@ export type AppRole = 'admin' | 'sachbearbeiter' | 'vertriebler';
 
 interface Profile {
   full_name: string | null;
-  avatar_url?: string | null;
+  avatar_url: string | null;
 }
 
 interface AuthState {
@@ -65,15 +65,38 @@ export function useAuth() {
   const fetchUserData = async (userId: string) => {
     const [roleResult, profileResult] = await Promise.all([
       supabase.from('user_roles').select('role').eq('user_id', userId).single(),
-      supabase.from('profiles').select('full_name').eq('id', userId).single(),
+      supabase.from('profiles').select('full_name, avatar_url').eq('id', userId).single(),
     ]);
 
     setState(prev => ({
       ...prev,
       role: roleResult.data?.role as AppRole ?? null,
-      profile: profileResult.data ?? null,
+      profile: profileResult.data ? {
+        full_name: profileResult.data.full_name,
+        avatar_url: profileResult.data.avatar_url,
+      } : null,
       loading: false,
     }));
+  };
+
+  const refreshProfile = async () => {
+    if (!state.user?.id) return;
+    
+    const { data } = await supabase
+      .from('profiles')
+      .select('full_name, avatar_url')
+      .eq('id', state.user.id)
+      .single();
+    
+    if (data) {
+      setState(prev => ({
+        ...prev,
+        profile: {
+          full_name: data.full_name,
+          avatar_url: data.avatar_url,
+        },
+      }));
+    }
   };
 
   const signIn = async (email: string, password: string) => {
@@ -114,5 +137,6 @@ export function useAuth() {
     signIn,
     signUp,
     signOut,
+    refreshProfile,
   };
 }
