@@ -18,13 +18,13 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Upload, FileText, X } from 'lucide-react';
+import { Plus, Upload, FileText, ChevronRight, Folder } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 type CaseStatus = 'neu' | 'bezahlt' | 'in_bearbeitung' | 'abgeschlossen' | 'einspruch';
 type ProductType = 'steuern' | 'kredit' | 'versicherung';
 
-interface Folder {
+interface FolderData {
   id: string;
   name: string;
   customer_name: string;
@@ -44,7 +44,7 @@ interface Document {
 }
 
 const statusLabels: Record<CaseStatus, string> = {
-  neu: 'Neu',
+  neu: 'Neu / Anfrage',
   bezahlt: 'Bezahlt',
   in_bearbeitung: 'In Bearbeitung',
   abgeschlossen: 'Abgeschlossen',
@@ -52,30 +52,45 @@ const statusLabels: Record<CaseStatus, string> = {
 };
 
 const statusColors: Record<CaseStatus, string> = {
-  neu: 'bg-yellow-500/20 text-yellow-400',
-  bezahlt: 'bg-green-500/20 text-green-400',
-  in_bearbeitung: 'bg-blue-500/20 text-blue-400',
-  abgeschlossen: 'bg-emerald-500/20 text-emerald-400',
-  einspruch: 'bg-orange-500/20 text-orange-400',
+  neu: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  bezahlt: 'bg-green-500/20 text-green-400 border-green-500/30',
+  in_bearbeitung: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  abgeschlossen: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  einspruch: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
 };
 
-const productColors: Record<ProductType, string> = {
-  steuern: 'border-l-red-500',
-  kredit: 'border-l-blue-500',
-  versicherung: 'border-l-green-500',
+const productConfig: Record<ProductType, { label: string; color: string; bgColor: string }> = {
+  steuern: { 
+    label: 'Steuererklärung', 
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/20 border-red-500/30'
+  },
+  kredit: { 
+    label: 'Kredit', 
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/20 border-blue-500/30'
+  },
+  versicherung: { 
+    label: 'Versicherung', 
+    color: 'text-green-400',
+    bgColor: 'bg-green-500/20 border-green-500/30'
+  },
 };
 
-const productLabels: Record<ProductType, string> = {
-  steuern: 'Steuern',
-  kredit: 'Kredit',
-  versicherung: 'Versicherung',
-};
+const allStatuses: CaseStatus[] = ['neu', 'bezahlt', 'in_bearbeitung', 'abgeschlossen', 'einspruch'];
+const allProducts: ProductType[] = ['steuern', 'kredit', 'versicherung'];
 
 export function OrdnerView() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
+  
+  // Navigation state
+  const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<CaseStatus | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<FolderData | null>(null);
+  
+  // Data state
+  const [folders, setFolders] = useState<FolderData[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -84,7 +99,6 @@ export function OrdnerView() {
   // Form state
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [product, setProduct] = useState<ProductType>('steuern');
   const [partnerCode, setPartnerCode] = useState('');
 
   useEffect(() => {
@@ -125,7 +139,7 @@ export function OrdnerView() {
   };
 
   const createFolder = async () => {
-    if (!customerName.trim() || !user?.id) return;
+    if (!customerName.trim() || !user?.id || !selectedProduct || !selectedStatus) return;
 
     const date = new Date().toLocaleDateString('de-DE');
     const folderName = `${customerName} - ${date}`;
@@ -134,7 +148,8 @@ export function OrdnerView() {
       name: folderName,
       customer_name: customerName,
       customer_email: customerEmail || null,
-      product,
+      product: selectedProduct,
+      status: selectedStatus,
       partner_code: partnerCode || null,
       created_by: user.id,
     });
@@ -146,7 +161,6 @@ export function OrdnerView() {
       setIsCreateOpen(false);
       setCustomerName('');
       setCustomerEmail('');
-      setProduct('steuern');
       setPartnerCode('');
       fetchFolders();
     }
@@ -224,19 +238,68 @@ export function OrdnerView() {
     URL.revokeObjectURL(url);
   };
 
+  const goBack = () => {
+    if (selectedFolder) {
+      setSelectedFolder(null);
+      setDocuments([]);
+    } else if (selectedStatus) {
+      setSelectedStatus(null);
+    } else if (selectedProduct) {
+      setSelectedProduct(null);
+    }
+  };
+
+  // Get breadcrumb path
+  const getBreadcrumb = () => {
+    const parts: string[] = ['Drive'];
+    if (selectedProduct) parts.push(productConfig[selectedProduct].label);
+    if (selectedStatus) parts.push(statusLabels[selectedStatus]);
+    if (selectedFolder) parts.push(selectedFolder.customer_name);
+    return parts;
+  };
+
+  // Filter folders by selected product and status
+  const filteredFolders = folders.filter(f => 
+    f.product === selectedProduct && f.status === selectedStatus
+  );
+
+  // Count folders per status for current product
+  const getStatusCount = (status: CaseStatus) => {
+    return folders.filter(f => f.product === selectedProduct && f.status === status).length;
+  };
+
+  // Count folders per product
+  const getProductCount = (product: ProductType) => {
+    return folders.filter(f => f.product === product).length;
+  };
+
+  // Render breadcrumb navigation
+  const renderBreadcrumb = () => {
+    const parts = getBreadcrumb();
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        {parts.map((part, index) => (
+          <div key={index} className="flex items-center gap-2">
+            {index > 0 && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+            <span className={index === parts.length - 1 ? 'text-foreground font-medium' : 'text-muted-foreground'}>
+              {part}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // EBENE 4: Dokumente im Kundenordner
   if (selectedFolder) {
     return (
       <div className="space-y-4">
-        {/* Folder Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => setSelectedFolder(null)}>
+            <Button variant="ghost" size="sm" onClick={goBack}>
               ← Zurück
             </Button>
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">{selectedFolder.name}</h2>
-              <p className="text-sm text-muted-foreground">{selectedFolder.customer_email}</p>
-            </div>
+            {renderBreadcrumb()}
           </div>
           
           <div className="flex items-center gap-2">
@@ -272,13 +335,24 @@ export function OrdnerView() {
           </div>
         </div>
 
+        {/* Customer Info */}
+        <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4">
+          <h3 className="font-semibold text-foreground">{selectedFolder.customer_name}</h3>
+          {selectedFolder.customer_email && (
+            <p className="text-sm text-muted-foreground">{selectedFolder.customer_email}</p>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            Erstellt: {new Date(selectedFolder.created_at).toLocaleDateString('de-DE')}
+          </p>
+        </div>
+
         {/* Documents Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {documents.map((doc) => (
             <div
               key={doc.id}
               onClick={() => downloadDocument(doc)}
-              className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4 cursor-pointer transition-all"
+              className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4 cursor-pointer hover:bg-card/60 transition-all"
             >
               <div className="flex items-center justify-center h-16 mb-3">
                 <FileText className="w-10 h-10 text-primary/60" />
@@ -306,119 +380,183 @@ export function OrdnerView() {
     );
   }
 
+  // EBENE 3: Kundenfälle für ausgewählten Status
+  if (selectedProduct && selectedStatus) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={goBack}>
+              ← Zurück
+            </Button>
+            {renderBreadcrumb()}
+          </div>
+          
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary text-primary-foreground">
+                <Plus className="w-4 h-4 mr-2" />
+                Neuer Kundenordner
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border">
+              <DialogHeader>
+                <DialogTitle>Neuen Kundenordner erstellen</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="bg-muted/30 rounded-lg p-3 text-sm">
+                  <p><strong>Produkt:</strong> {productConfig[selectedProduct].label}</p>
+                  <p><strong>Status:</strong> {statusLabels[selectedStatus]}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customer-name">Kundenname *</Label>
+                  <Input
+                    id="customer-name"
+                    placeholder="Max Mustermann"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="bg-input/50 border-border"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customer-email">E-Mail</Label>
+                  <Input
+                    id="customer-email"
+                    type="email"
+                    placeholder="max@beispiel.de"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    className="bg-input/50 border-border"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="partner-code">Partner-Code (optional)</Label>
+                  <Input
+                    id="partner-code"
+                    placeholder="z.B. EROL2024"
+                    value={partnerCode}
+                    onChange={(e) => setPartnerCode(e.target.value)}
+                    className="bg-input/50 border-border"
+                  />
+                </div>
+                <Button onClick={createFolder} className="w-full" disabled={!customerName.trim()}>
+                  Ordner erstellen
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Customer Folders Grid */}
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <p className="text-muted-foreground">Laden...</p>
+          </div>
+        ) : filteredFolders.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredFolders.map((folder) => (
+              <div
+                key={folder.id}
+                onClick={() => setSelectedFolder(folder)}
+                className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4 cursor-pointer hover:bg-card/60 transition-all"
+              >
+                <div className="aspect-square bg-primary/20 rounded-lg mb-3 flex items-center justify-center">
+                  <Folder className="w-12 h-12 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground truncate">{folder.customer_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(folder.created_at).toLocaleDateString('de-DE')}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl min-h-[300px] flex items-center justify-center">
+            <div className="text-center space-y-2">
+              <Folder className="w-12 h-12 text-muted-foreground/50 mx-auto" />
+              <p className="text-muted-foreground">Keine Kundenordner vorhanden</p>
+              <p className="text-sm text-muted-foreground/70">
+                Klicken Sie auf "Neuer Kundenordner" um einen anzulegen
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // EBENE 2: Status-Ordner für ausgewähltes Produkt
+  if (selectedProduct) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={goBack}>
+            ← Zurück
+          </Button>
+          {renderBreadcrumb()}
+        </div>
+
+        {/* Status Folders Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {allStatuses.map((status) => {
+            const count = getStatusCount(status);
+            return (
+              <div
+                key={status}
+                onClick={() => setSelectedStatus(status)}
+                className={`border rounded-xl p-4 cursor-pointer hover:scale-[1.02] transition-all ${statusColors[status]}`}
+              >
+                <div className="aspect-square rounded-lg mb-3 flex items-center justify-center bg-background/20">
+                  <Folder className="w-12 h-12" />
+                </div>
+                <p className="text-sm font-medium truncate">{statusLabels[status]}</p>
+                <p className="text-xs opacity-70">
+                  {count} {count === 1 ? 'Ordner' : 'Ordner'}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // EBENE 1: Produkt-Ordner (Steuern, Kredit, Versicherung)
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Mein Drive</h2>
-          <p className="text-sm text-muted-foreground">Mandanten-Ordner</p>
-        </div>
-        
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary text-primary-foreground">
-              <Plus className="w-4 h-4 mr-2" />
-              Neuer Ordner
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border">
-            <DialogHeader>
-              <DialogTitle>Neuen Mandanten-Ordner erstellen</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="customer-name">Kundenname *</Label>
-                <Input
-                  id="customer-name"
-                  placeholder="Max Mustermann"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="bg-input/50 border-border"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="customer-email">E-Mail</Label>
-                <Input
-                  id="customer-email"
-                  type="email"
-                  placeholder="max@beispiel.de"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="bg-input/50 border-border"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Produkt</Label>
-                <Select value={product} onValueChange={(v) => setProduct(v as ProductType)}>
-                  <SelectTrigger className="bg-input/50 border-border">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="steuern">Steuern</SelectItem>
-                    <SelectItem value="kredit">Kredit</SelectItem>
-                    <SelectItem value="versicherung">Versicherung</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="partner-code">Partner-Code (optional)</Label>
-                <Input
-                  id="partner-code"
-                  placeholder="z.B. EROL2024"
-                  value={partnerCode}
-                  onChange={(e) => setPartnerCode(e.target.value)}
-                  className="bg-input/50 border-border"
-                />
-              </div>
-              <Button onClick={createFolder} className="w-full" disabled={!customerName.trim()}>
-                Ordner erstellen
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Mein Drive</h2>
+        <p className="text-sm text-muted-foreground">Wählen Sie eine Kategorie</p>
       </div>
 
-      {/* Folders Grid */}
+      {/* Product Folders Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Laden...</p>
         </div>
-      ) : folders.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {folders.map((folder) => (
-            <div
-              key={folder.id}
-              onClick={() => setSelectedFolder(folder)}
-              className={`bg-card/40 backdrop-blur-sm border border-border border-l-4 ${productColors[folder.product]} rounded-xl p-4 cursor-pointer transition-all`}
-            >
-              {/* Folder Icon */}
-              <div className="aspect-square bg-primary/20 rounded-lg mb-3 flex items-center justify-center">
-                <svg viewBox="0 0 80 60" className="w-12 h-12 text-primary" fill="currentColor">
-                  <path d="M8 10h24l6 8h34c4.4 0 8 3.6 8 8v24c0 4.4-3.6 8-8 8H8c-4.4 0-8-3.6-8-8V18c0-4.4 3.6-8 8-8z" opacity="0.3"/>
-                  <path d="M8 14h24l6 8h34c4.4 0 8 3.6 8 8v20c0 4.4-3.6 8-8 8H8c-4.4 0-8-3.6-8-8V22c0-4.4 3.6-8 8-8z"/>
-                </svg>
-              </div>
-              
-              <p className="text-sm font-medium text-foreground truncate">{folder.customer_name}</p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(folder.created_at).toLocaleDateString('de-DE')}
-              </p>
-              
-              {/* Status Badge */}
-              <div className={`mt-2 inline-block px-2 py-0.5 rounded-full text-xs ${statusColors[folder.status]}`}>
-                {statusLabels[folder.status]}
-              </div>
-            </div>
-          ))}
-        </div>
       ) : (
-        <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl min-h-[300px] flex items-center justify-center">
-          <div className="text-center space-y-2">
-            <p className="text-muted-foreground">Noch keine Ordner vorhanden</p>
-            <p className="text-sm text-muted-foreground/70">
-              Klicken Sie auf "Neuer Ordner" um zu beginnen
-            </p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {allProducts.map((product) => {
+            const config = productConfig[product];
+            const count = getProductCount(product);
+            return (
+              <div
+                key={product}
+                onClick={() => setSelectedProduct(product)}
+                className={`border rounded-xl p-6 cursor-pointer hover:scale-[1.02] transition-all ${config.bgColor}`}
+              >
+                <div className="flex items-center justify-center h-24 mb-4">
+                  <Folder className={`w-16 h-16 ${config.color}`} />
+                </div>
+                <h3 className={`text-lg font-semibold text-center ${config.color}`}>
+                  {config.label}
+                </h3>
+                <p className="text-sm text-center text-muted-foreground mt-1">
+                  {count} {count === 1 ? 'Kundenordner' : 'Kundenordner'}
+                </p>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
