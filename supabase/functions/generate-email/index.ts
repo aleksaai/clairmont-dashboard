@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,8 +10,15 @@ interface GenerateEmailRequest {
   prompt: string;
   customerName: string;
   customerEmail: string;
-  context?: string;
+  productType?: string | null;
+  folderName?: string | null;
 }
+
+const productTypeLabels: Record<string, string> = {
+  steuern: 'Steuern',
+  kredit: 'Kredit',
+  versicherung: 'Baufinanzierung',
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -19,14 +27,53 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, customerName, customerEmail, context }: GenerateEmailRequest = await req.json();
+    const { prompt, customerName, customerEmail, productType, folderName }: GenerateEmailRequest = await req.json();
     
     console.log("Generating email for customer:", customerName);
     console.log("User prompt:", prompt);
+    console.log("Product type:", productType);
+    console.log("Folder name:", folderName);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    // Fetch knowledge base entries
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    let knowledgeBaseContext = "";
+    
+    // Fetch relevant knowledge base entries (general + product-specific)
+    const { data: kbEntries, error: kbError } = await supabase
+      .from("knowledge_base")
+      .select("title, content, product_type, content_type")
+      .or(`product_type.is.null,product_type.eq.${productType || 'steuern'}`);
+
+    if (kbError) {
+      console.error("Error fetching knowledge base:", kbError);
+    } else if (kbEntries && kbEntries.length > 0) {
+      console.log(`Found ${kbEntries.length} knowledge base entries`);
+      
+      // Only use text entries (PDFs would need OCR)
+      const textEntries = kbEntries.filter(e => e.content_type === 'text' && e.content);
+      
+      if (textEntries.length > 0) {
+        knowledgeBaseContext = `\n\nWISSENSBASIS (nutze dieses Wissen für deine Antworten):\n${textEntries.map(e => `### ${e.title}:\n${e.content}`).join('\n\n')}`;
+      }
+    }
+
+    // Build context about the current case
+    const productLabel = productType ? productTypeLabels[productType] || productType : null;
+    let caseContext = "";
+    
+    if (productLabel) {
+      caseContext = `\nAKTUELLER FALL: Der Kunde "${customerName}" wird im Bereich "${productLabel}" betreut.`;
+      if (folderName) {
+        caseContext += ` Ordnername: "${folderName}".`;
+      }
     }
 
     const systemPrompt = `Du bist ein herzlicher, professioneller E-Mail-Assistent für Clairmont Advisory, eine Steuer- und Finanzberatungsagentur.
@@ -36,7 +83,8 @@ Deine Aufgabe ist es, freundliche, warme und professionelle E-Mails auf Deutsch 
 Kundeninformationen:
 - Name: ${customerName}
 - E-Mail: ${customerEmail}
-${context ? `- Kontext: ${context}` : ''}
+${caseContext}
+${knowledgeBaseContext}
 
 WICHTIGE REGELN FÜR DIE E-MAIL:
 1. Beginne IMMER mit einer freundlichen Anrede wie "Guten Tag Herr/Frau ${customerName}," oder "Liebe/r ${customerName},"
@@ -47,6 +95,9 @@ WICHTIGE REGELN FÜR DIE E-MAIL:
    Ihr Team von Clairmont Advisory"
 5. Die E-Mail sollte menschlich und einladend klingen
 6. Sei hilfsbereit und zeige echtes Interesse am Kunden
+7. WICHTIG: Wenn du über einen bestimmten Bereich schreibst (z.B. Steuern, Baufinanzierung, Kredit), nutze das Wissen aus der Wissensbasis.
+8. ERFINDE NICHTS! Wenn du keine Informationen zu einem Thema hast, sage das ehrlich und biete an, dass sich ein Kollege melden wird.
+9. Wenn der Nutzer sagt, dass ihr nicht helfen könnt, beziehe dich auf den aktuellen Bereich (${productLabel || 'unser Angebot'}).
 
 Du musst SOWOHL einen passenden Betreff ALS AUCH die vollständige E-Mail-Nachricht generieren.
 
@@ -63,7 +114,7 @@ Antworte im folgenden JSON-Format:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-5",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Schreibe eine E-Mail zum Thema: ${prompt}` },

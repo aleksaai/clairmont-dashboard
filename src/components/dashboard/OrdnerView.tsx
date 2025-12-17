@@ -470,6 +470,8 @@ export function OrdnerView() {
           onClose={() => setIsEmailOpen(false)}
           customerName={selectedFolder.customer_name}
           customerEmail={selectedFolder.customer_email}
+          productType={selectedFolder.product}
+          folderName={selectedFolder.name}
         />
       </div>
     );
