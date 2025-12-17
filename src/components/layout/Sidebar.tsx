@@ -6,14 +6,8 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'mandanten', label: 'Mandanten' },
-  { id: 'ordner', label: 'Ordner' },
-  { id: 'dokumente', label: 'Dokumente' },
+  { id: 'ordner', label: 'Mein Drive' },
   { id: 'chats', label: 'Chats' },
-  { id: 'aufgaben', label: 'Aufgaben' },
-  { id: 'kalender', label: 'Kalender' },
-  { id: 'berichte', label: 'Berichte' },
 ];
 
 const adminItems = [
@@ -29,7 +23,6 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
         <h1 className="text-xl font-semibold text-sidebar-foreground tracking-tight">
           Clairmont
         </h1>
-        <p className="text-xs text-muted-foreground mt-1">Mandanten-Verwaltung</p>
       </div>
 
       {/* Main Navigation */}

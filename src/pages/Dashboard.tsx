@@ -4,14 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
-import { StatsOverview } from '@/components/dashboard/StatsOverview';
-import { MandantenListe } from '@/components/dashboard/MandantenListe';
-import { OrdnerListe } from '@/components/dashboard/OrdnerListe';
-import { DokumenteListe } from '@/components/dashboard/DokumenteListe';
+import { OrdnerView } from '@/components/dashboard/OrdnerView';
 import { ChatsListe } from '@/components/dashboard/ChatsListe';
-import { AufgabenListe } from '@/components/dashboard/AufgabenListe';
-import { KalenderView } from '@/components/dashboard/KalenderView';
-import { BerichteView } from '@/components/dashboard/BerichteView';
 import { TeamView } from '@/components/dashboard/TeamView';
 import { EinstellungenView } from '@/components/dashboard/EinstellungenView';
 
@@ -19,7 +13,7 @@ export default function Dashboard() {
   const { user, role, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const [activeSection, setActiveSection] = useState('ordner');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -50,33 +44,16 @@ export default function Dashboard() {
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'dashboard':
-        return (
-          <div className="space-y-6">
-            <StatsOverview />
-            <MandantenListe />
-          </div>
-        );
-      case 'mandanten':
-        return <MandantenListe />;
       case 'ordner':
-        return <OrdnerListe />;
-      case 'dokumente':
-        return <DokumenteListe />;
+        return <OrdnerView />;
       case 'chats':
         return <ChatsListe />;
-      case 'aufgaben':
-        return <AufgabenListe />;
-      case 'kalender':
-        return <KalenderView />;
-      case 'berichte':
-        return <BerichteView />;
       case 'team':
         return <TeamView />;
       case 'einstellungen':
         return <EinstellungenView />;
       default:
-        return <MandantenListe />;
+        return <OrdnerView />;
     }
   };
 
