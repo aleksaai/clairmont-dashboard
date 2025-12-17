@@ -16,6 +16,7 @@ interface HeaderProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
   onSignOut: () => void;
+  unreadMessageCount?: number;
 }
 
 const navItems = [
@@ -47,7 +48,7 @@ const getInitials = (name: string | null) => {
   return name.substring(0, 2).toUpperCase();
 };
 
-export function Header({ userName, userRole, avatarUrl, activeSection, onSectionChange, onSignOut }: HeaderProps) {
+export function Header({ userName, userRole, avatarUrl, activeSection, onSectionChange, onSignOut, unreadMessageCount = 0 }: HeaderProps) {
   return (
     <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-6">
       {/* Left: Logo + Navigation */}
@@ -67,13 +68,18 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
                 key={item.id}
                 onClick={() => onSectionChange(item.id)}
                 className={cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors relative',
                   activeSection === item.id
                     ? 'bg-primary/20 text-foreground'
                     : 'text-muted-foreground'
                 )}
               >
                 {item.label}
+                {item.id === 'chats' && unreadMessageCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center px-1">
+                    {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                  </span>
+                )}
               </button>
             ))}
         </nav>
