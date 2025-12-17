@@ -18,8 +18,9 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Upload, FileText, ChevronRight, Folder, Image, FileSpreadsheet, FileType, File, FileVideo, FileAudio, FileArchive, FileCode, Presentation } from 'lucide-react';
+import { Plus, Upload, FileText, ChevronRight, Folder, Image, FileSpreadsheet, FileType, File, FileVideo, FileAudio, FileArchive, FileCode, Presentation, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { EmailDialog } from './EmailDialog';
 
 type CaseStatus = 'neu' | 'bezahlt' | 'in_bearbeitung' | 'abgeschlossen' | 'einspruch' | 'anfrage_eingegangen' | 'prognose_erstellt' | 'angebot_gesendet' | 'anzahlung_erhalten' | 'einspruch_nacharbeit';
 type ProductType = 'steuern' | 'kredit' | 'versicherung';
@@ -142,6 +143,7 @@ export function OrdnerView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isEmailOpen, setIsEmailOpen] = useState(false);
   
   // Form state
   const [customerName, setCustomerName] = useState('');
@@ -376,16 +378,25 @@ export function OrdnerView() {
           </div>
           
           <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEmailOpen(true)}
+              className="border-border"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              E-Mail
+            </Button>
+            
             <Select
               value={selectedFolder.status}
               onValueChange={(value) => updateStatus(selectedFolder.id, value as CaseStatus)}
             >
-              <SelectTrigger className="w-40 bg-input/50 border-border">
+              <SelectTrigger className="w-48 bg-input/50 border-border">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(statusLabels).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                {productStatuses[selectedFolder.product].map((status) => (
+                  <SelectItem key={status} value={status}>{statusLabels[status]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -452,6 +463,14 @@ export function OrdnerView() {
             </div>
           </div>
         )}
+
+        {/* Email Dialog */}
+        <EmailDialog
+          isOpen={isEmailOpen}
+          onClose={() => setIsEmailOpen(false)}
+          customerName={selectedFolder.customer_name}
+          customerEmail={selectedFolder.customer_email}
+        />
       </div>
     );
   }
