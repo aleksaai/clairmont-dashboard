@@ -12,19 +12,13 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Passwort muss mindestens 6 Zeichen haben'),
 });
 
-const signupSchema = loginSchema.extend({
-  fullName: z.string().min(2, 'Name muss mindestens 2 Zeichen haben'),
-});
-
 export default function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { signIn, signUp, user, loading } = useAuth();
+  const { signIn, user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -36,11 +30,7 @@ export default function Auth() {
 
   const validateForm = () => {
     try {
-      if (isLogin) {
-        loginSchema.parse({ email, password });
-      } else {
-        signupSchema.parse({ email, password, fullName });
-      }
+      loginSchema.parse({ email, password });
       setErrors({});
       return true;
     } catch (error) {
@@ -65,34 +55,15 @@ export default function Auth() {
     setIsSubmitting(true);
 
     try {
-      if (isLogin) {
-        const { error } = await signIn(email, password);
-        if (error) {
-          toast({
-            title: 'Anmeldung fehlgeschlagen',
-            description: error.message === 'Invalid login credentials'
-              ? 'E-Mail oder Passwort ist falsch'
-              : error.message,
-            variant: 'destructive',
-          });
-        }
-      } else {
-        const { error } = await signUp(email, password, fullName);
-        if (error) {
-          toast({
-            title: 'Registrierung fehlgeschlagen',
-            description: error.message.includes('already registered')
-              ? 'Diese E-Mail ist bereits registriert'
-              : error.message,
-            variant: 'destructive',
-          });
-        } else {
-          toast({
-            title: 'Registrierung erfolgreich',
-            description: 'Sie können sich jetzt anmelden',
-          });
-          setIsLogin(true);
-        }
+      const { error } = await signIn(email, password);
+      if (error) {
+        toast({
+          title: 'Anmeldung fehlgeschlagen',
+          description: error.message === 'Invalid login credentials'
+            ? 'E-Mail oder Passwort ist falsch'
+            : error.message,
+          variant: 'destructive',
+        });
       }
     } finally {
       setIsSubmitting(false);
@@ -118,30 +89,11 @@ export default function Auth() {
               Clairmont
             </h1>
             <p className="text-muted-foreground text-sm">
-              {isLogin ? 'Melden Sie sich an' : 'Erstellen Sie ein Konto'}
+              Melden Sie sich an
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-foreground/80">
-                  Vollständiger Name
-                </Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="glass-input bg-input/30 border-glass-border focus:border-ring"
-                  placeholder="Max Mustermann"
-                />
-                {errors.fullName && (
-                  <p className="text-destructive text-xs">{errors.fullName}</p>
-                )}
-              </div>
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="email" className="text-foreground/80">
                 E-Mail
@@ -181,28 +133,13 @@ export default function Auth() {
               disabled={isSubmitting}
               className="w-full bg-primary text-primary-foreground border-0 rounded-lg py-5"
             >
-              {isSubmitting
-                ? 'Wird verarbeitet...'
-                : isLogin
-                  ? 'Anmelden'
-                  : 'Registrieren'}
+              {isSubmitting ? 'Wird verarbeitet...' : 'Anmelden'}
             </Button>
           </form>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setErrors({});
-              }}
-              className="text-sm text-muted-foreground"
-            >
-              {isLogin
-                ? 'Noch kein Konto? Registrieren'
-                : 'Bereits registriert? Anmelden'}
-            </button>
-          </div>
+          <p className="text-center text-xs text-muted-foreground">
+            Kontaktieren Sie einen Administrator, um Zugang zu erhalten.
+          </p>
         </div>
       </div>
     </div>
