@@ -32,7 +32,7 @@ interface WebhookPayload {
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -42,12 +42,13 @@ serve(async (req) => {
   }
 
   try {
-    // Verify webhook secret
-    const webhookSecret = req.headers.get("x-webhook-secret");
+    // Verify webhook secret via Authorization header
+    const authHeader = req.headers.get("authorization");
     const expectedSecret = Deno.env.get("INSURANCE_WEBHOOK_SECRET");
+    const providedSecret = authHeader?.replace("Bearer ", "");
     
-    if (!webhookSecret || webhookSecret !== expectedSecret) {
-      console.error("Invalid or missing webhook secret");
+    if (!providedSecret || providedSecret !== expectedSecret) {
+      console.error("Invalid or missing authorization");
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
