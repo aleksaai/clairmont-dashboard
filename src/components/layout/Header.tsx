@@ -1,6 +1,12 @@
-import { LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Settings, LogOut } from 'lucide-react';
 
 interface HeaderProps {
   userName: string | null;
@@ -15,7 +21,6 @@ const navItems = [
   { id: 'ordner', label: 'Drive' },
   { id: 'chats', label: 'Chats' },
   { id: 'team', label: 'Team' },
-  { id: 'einstellungen', label: 'Einstellungen' },
 ];
 
 const getRoleLabel = (role: string | null) => {
@@ -76,32 +81,36 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
         />
       </div>
 
-      {/* Right: User */}
+      {/* Right: User Info + Avatar with Dropdown */}
       <div className="flex items-center gap-3">
-        {/* Avatar */}
-        <div className="w-9 h-9 rounded-full bg-primary/30 flex items-center justify-center overflow-hidden">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt={userName ?? ''} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-sm font-medium text-foreground">
-              {getInitials(userName)}
-            </span>
-          )}
-        </div>
-        
         <div className="text-right">
           <p className="text-sm font-medium text-foreground">{userName || 'Benutzer'}</p>
           <p className="text-xs text-muted-foreground">{getRoleLabel(userRole)}</p>
         </div>
         
-        <Button
-          onClick={onSignOut}
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground"
-        >
-          <LogOut className="w-4 h-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-9 h-9 rounded-full bg-primary/30 flex items-center justify-center overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={userName ?? ''} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-sm font-medium text-foreground">
+                  {getInitials(userName)}
+                </span>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => onSectionChange('einstellungen')} className="cursor-pointer">
+              <Settings className="w-4 h-4 mr-2" />
+              Einstellungen
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onSignOut} className="cursor-pointer text-destructive focus:text-destructive">
+              <LogOut className="w-4 h-4 mr-2" />
+              Abmelden
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
