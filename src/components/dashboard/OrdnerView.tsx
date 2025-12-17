@@ -69,19 +69,19 @@ const productConfig: Record<ProductType, { label: string; color: string; bgColor
     color: 'text-blue-400',
     bgColor: 'bg-blue-500/20 border-blue-500/30'
   },
-  kredit: { 
-    label: 'Kredit', 
-    color: 'text-red-400',
-    bgColor: 'bg-red-500/20 border-red-500/30'
-  },
   versicherung: { 
-    label: 'Versicherung', 
+    label: 'Versicherungsfälle', 
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/20 border-emerald-500/30'
   },
+  kredit: { 
+    label: 'Kreditfälle', 
+    color: 'text-yellow-400',
+    bgColor: 'bg-yellow-500/20 border-yellow-500/30'
+  },
 };
 
-const allProducts: ProductType[] = ['steuern', 'kredit', 'versicherung'];
+const allProducts: ProductType[] = ['steuern', 'versicherung', 'kredit'];
 
 export function OrdnerView() {
   const { user } = useAuth();
