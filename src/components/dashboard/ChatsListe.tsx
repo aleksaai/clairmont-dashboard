@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Send } from 'lucide-react';
+import { Send, Paperclip, FileText, Image, X } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,7 +23,13 @@ interface Message {
   content: string;
   created_at: string;
   read: boolean;
+  file_path?: string | null;
+  file_name?: string | null;
+  file_type?: string | null;
 }
+
+const ALLOWED_FILE_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function ChatsListe() {
   const { user } = useAuth();
@@ -33,7 +39,10 @@ export function ChatsListe() {
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch all users
   useEffect(() => {
@@ -207,22 +216,95 @@ export function ChatsListe() {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!messageInput.trim() || !user || !selectedUser) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const { error } = await supabase.from('messages').insert({
-      sender_id: user.id,
-      receiver_id: selectedUser.id,
-      content: messageInput.trim(),
-    });
-
-    if (error) {
-      console.error('Error sending message:', error);
-      toast.error('Nachricht konnte nicht gesendet werden');
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      toast.error('Nur PDF, PNG und JPEG Dateien erlaubt');
       return;
     }
 
-    setMessageInput('');
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('Datei darf maximal 10MB groß sein');
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const uploadFile = async (file: File): Promise<{ path: string; name: string; type: string } | null> => {
+    if (!user) return null;
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error } = await supabase.storage
+      .from('chat-attachments')
+      .upload(fileName, file);
+
+    if (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
+
+    return {
+      path: fileName,
+      name: file.name,
+      type: file.type,
+    };
+  };
+
+  const getFileUrl = (filePath: string) => {
+    const { data } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const getSignedUrl = async (filePath: string) => {
+    const { data } = await supabase.storage
+      .from('chat-attachments')
+      .createSignedUrl(filePath, 3600); // 1 hour
+    return data?.signedUrl;
+  };
+
+  const handleSendMessage = async () => {
+    if ((!messageInput.trim() && !selectedFile) || !user || !selectedUser) return;
+
+    setUploading(true);
+
+    try {
+      let fileData = null;
+
+      if (selectedFile) {
+        fileData = await uploadFile(selectedFile);
+        if (!fileData) {
+          toast.error('Datei konnte nicht hochgeladen werden');
+          setUploading(false);
+          return;
+        }
+      }
+
+      const { error } = await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: selectedUser.id,
+        content: messageInput.trim() || (fileData ? fileData.name : ''),
+        file_path: fileData?.path || null,
+        file_name: fileData?.name || null,
+        file_type: fileData?.type || null,
+      });
+
+      if (error) {
+        console.error('Error sending message:', error);
+        toast.error('Nachricht konnte nicht gesendet werden');
+        return;
+      }
+
+      setMessageInput('');
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } finally {
+      setUploading(false);
+    }
   };
 
   const filteredUsers = users.filter(u => 
@@ -347,7 +429,20 @@ export function ChatsListe() {
                             : 'bg-card/80 text-foreground rounded-bl-sm'
                         }`}
                       >
-                        <p className="text-sm">{message.content}</p>
+                        {message.file_path && (
+                          <MessageAttachment
+                            filePath={message.file_path}
+                            fileName={message.file_name || 'Datei'}
+                            fileType={message.file_type || ''}
+                            isSender={message.sender_id === user?.id}
+                          />
+                        )}
+                        {message.content && !message.file_path && (
+                          <p className="text-sm">{message.content}</p>
+                        )}
+                        {message.content && message.file_path && message.content !== message.file_name && (
+                          <p className="text-sm mt-2">{message.content}</p>
+                        )}
                         <p className={`text-xs mt-1 ${
                           message.sender_id === user?.id 
                             ? 'text-primary-foreground/70' 
@@ -365,7 +460,45 @@ export function ChatsListe() {
 
             {/* Message Input */}
             <div className="p-3 border-t border-border bg-card/50 backdrop-blur-sm">
+              {selectedFile && (
+                <div className="mb-2 p-2 bg-muted/50 rounded-lg flex items-center gap-2">
+                  {selectedFile.type.startsWith('image/') ? (
+                    <Image className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                  )}
+                  <span className="text-sm text-foreground truncate flex-1">
+                    {selectedFile.name}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
               <div className="flex gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  <Paperclip className="w-4 h-4" />
+                </Button>
                 <input
                   type="text"
                   placeholder="Nachricht schreiben..."
@@ -373,12 +506,13 @@ export function ChatsListe() {
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                   className="flex-1 bg-input/50 border border-border rounded-lg px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  disabled={uploading}
                 />
                 <Button
                   onClick={handleSendMessage}
                   size="icon"
                   className="bg-primary text-primary-foreground"
-                  disabled={!messageInput.trim()}
+                  disabled={(!messageInput.trim() && !selectedFile) || uploading}
                 >
                   <Send className="w-4 h-4" />
                 </Button>
@@ -392,5 +526,62 @@ export function ChatsListe() {
         )}
       </div>
     </div>
+  );
+}
+
+// Component for displaying message attachments
+function MessageAttachment({ 
+  filePath, 
+  fileName, 
+  fileType, 
+  isSender 
+}: { 
+  filePath: string; 
+  fileName: string; 
+  fileType: string;
+  isSender: boolean;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUrl = async () => {
+      const { data } = await supabase.storage
+        .from('chat-attachments')
+        .createSignedUrl(filePath, 3600);
+      setUrl(data?.signedUrl || null);
+    };
+    getUrl();
+  }, [filePath]);
+
+  if (!url) {
+    return <p className="text-sm">Lädt...</p>;
+  }
+
+  const isImage = fileType.startsWith('image/');
+
+  if (isImage) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+        <img 
+          src={url} 
+          alt={fileName} 
+          className="max-w-full rounded-lg max-h-48 object-cover"
+        />
+      </a>
+    );
+  }
+
+  return (
+    <a 
+      href={url} 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className={`flex items-center gap-2 p-2 rounded-lg ${
+        isSender ? 'bg-primary-foreground/10' : 'bg-muted/50'
+      }`}
+    >
+      <FileText className="w-5 h-5" />
+      <span className="text-sm truncate">{fileName}</span>
+    </a>
   );
 }
