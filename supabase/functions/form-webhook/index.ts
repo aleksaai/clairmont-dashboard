@@ -23,6 +23,7 @@ interface FormData {
   firstName: string;
   lastName: string;
   email?: string;
+  partnerCode?: string;
   [key: string]: unknown;
 }
 
@@ -69,6 +70,7 @@ serve(async (req) => {
     // Extract customer data from Clermont format
     const customerName = `${payload.formData?.firstName || ''} ${payload.formData?.lastName || ''}`.trim();
     const customerEmail = payload.formData?.email || null;
+    const partnerCode = payload.formData?.partnerCode || null;
     
     console.log('Received webhook payload for customer:', customerName);
 
@@ -100,7 +102,7 @@ serve(async (req) => {
         customer_email: customerEmail,
         product: 'steuern',
         status: 'anfrage_eingegangen',
-        partner_code: null,
+        partner_code: partnerCode,
         created_by: null, // System upload
       })
       .select()
