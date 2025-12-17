@@ -29,21 +29,32 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `Du bist ein professioneller E-Mail-Assistent für Clairmont Advisory, eine Steuer- und Finanzberatungsagentur.
-Du verfasst professionelle, freundliche E-Mails auf Deutsch.
-Die E-Mails sollten höflich, klar und präzise sein.
+    const systemPrompt = `Du bist ein herzlicher, professioneller E-Mail-Assistent für Clairmont Advisory, eine Steuer- und Finanzberatungsagentur.
+
+Deine Aufgabe ist es, freundliche, warme und professionelle E-Mails auf Deutsch zu verfassen.
 
 Kundeninformationen:
 - Name: ${customerName}
 - E-Mail: ${customerEmail}
 ${context ? `- Kontext: ${context}` : ''}
 
-Wichtige Regeln:
-1. Beginne NICHT mit einer Anrede (diese wird automatisch hinzugefügt)
-2. Schreibe nur den Haupttext der E-Mail
-3. Beende NICHT mit einer Grußformel (diese wird automatisch hinzugefügt)
-4. Schreibe professionell aber freundlich
-5. Halte die E-Mail kurz und prägnant`;
+WICHTIGE REGELN FÜR DIE E-MAIL:
+1. Beginne IMMER mit einer freundlichen Anrede wie "Guten Tag Herr/Frau ${customerName}," oder "Liebe/r ${customerName},"
+2. Schreibe herzlich, warm und persönlich - nicht roboterhaft oder kalt
+3. Verwende Absätze und Zeilenumbrüche für bessere Lesbarkeit
+4. Beende die E-Mail IMMER mit einer warmen Grußformel wie:
+   "Herzliche Grüße
+   Ihr Team von Clairmont Advisory"
+5. Die E-Mail sollte menschlich und einladend klingen
+6. Sei hilfsbereit und zeige echtes Interesse am Kunden
+
+Du musst SOWOHL einen passenden Betreff ALS AUCH die vollständige E-Mail-Nachricht generieren.
+
+Antworte im folgenden JSON-Format:
+{
+  "subject": "Der passende Betreff für die E-Mail",
+  "message": "Die vollständige E-Mail-Nachricht mit Anrede, Inhalt und Grußformel"
+}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -52,10 +63,10 @@ Wichtige Regeln:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "openai/gpt-5",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: prompt },
+          { role: "user", content: `Schreibe eine E-Mail zum Thema: ${prompt}` },
         ],
       }),
     });
@@ -81,12 +92,34 @@ Wichtige Regeln:
     }
 
     const data = await response.json();
-    const generatedText = data.choices?.[0]?.message?.content || "";
+    const generatedContent = data.choices?.[0]?.message?.content || "";
 
-    console.log("Email generated successfully");
+    console.log("Raw AI response:", generatedContent);
+
+    // Parse the JSON response
+    let subject = "";
+    let message = "";
+    
+    try {
+      // Try to parse as JSON
+      const jsonMatch = generatedContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        subject = parsed.subject || "";
+        message = parsed.message || "";
+      } else {
+        // Fallback: use the whole response as message
+        message = generatedContent;
+      }
+    } catch (parseError) {
+      console.log("Could not parse as JSON, using raw response");
+      message = generatedContent;
+    }
+
+    console.log("Email generated successfully - Subject:", subject);
 
     return new Response(
-      JSON.stringify({ generatedText }),
+      JSON.stringify({ subject, message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
