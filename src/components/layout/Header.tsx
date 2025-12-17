@@ -1,9 +1,11 @@
+import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface HeaderProps {
-  userEmail: string | undefined;
+  userName: string | null;
   userRole: string | null;
+  avatarUrl?: string | null;
   activeSection: string;
   onSectionChange: (section: string) => void;
   onSignOut: () => void;
@@ -29,9 +31,18 @@ const getRoleLabel = (role: string | null) => {
   }
 };
 
-export function Header({ userEmail, userRole, activeSection, onSectionChange, onSignOut }: HeaderProps) {
+const getInitials = (name: string | null) => {
+  if (!name) return '?';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
+
+export function Header({ userName, userRole, avatarUrl, activeSection, onSectionChange, onSignOut }: HeaderProps) {
   return (
-    <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
+    <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-6">
       {/* Left: Logo + Navigation */}
       <div className="flex items-center gap-8">
         <h1 className="text-lg font-semibold text-foreground tracking-tight">
@@ -56,28 +67,41 @@ export function Header({ userEmail, userRole, activeSection, onSectionChange, on
         </nav>
       </div>
 
-      {/* Right: Search + User */}
-      <div className="flex items-center gap-4">
+      {/* Center: Search */}
+      <div className="flex-1 flex justify-center px-8">
         <input
           type="text"
           placeholder="Suchen..."
-          className="bg-input/50 border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground w-48 focus:outline-none focus:ring-1 focus:ring-ring"
+          className="bg-input/50 border border-border rounded-lg px-4 py-1.5 text-sm text-foreground placeholder:text-muted-foreground w-80 focus:outline-none focus:ring-1 focus:ring-ring"
         />
-        
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-sm text-foreground">{userEmail}</p>
-            <p className="text-xs text-muted-foreground">{getRoleLabel(userRole)}</p>
-          </div>
-          <Button
-            onClick={onSignOut}
-            variant="outline"
-            size="sm"
-            className="bg-secondary/50 border-border"
-          >
-            Abmelden
-          </Button>
+      </div>
+
+      {/* Right: User */}
+      <div className="flex items-center gap-3">
+        {/* Avatar */}
+        <div className="w-9 h-9 rounded-full bg-primary/30 flex items-center justify-center overflow-hidden">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={userName ?? ''} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-sm font-medium text-foreground">
+              {getInitials(userName)}
+            </span>
+          )}
         </div>
+        
+        <div className="text-right">
+          <p className="text-sm font-medium text-foreground">{userName || 'Benutzer'}</p>
+          <p className="text-xs text-muted-foreground">{getRoleLabel(userRole)}</p>
+        </div>
+        
+        <Button
+          onClick={onSignOut}
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground"
+        >
+          <LogOut className="w-4 h-4" />
+        </Button>
       </div>
     </header>
   );
