@@ -22,6 +22,7 @@ const navItems = [
   { id: 'ordner', label: 'Drive' },
   { id: 'chats', label: 'Chats' },
   { id: 'team', label: 'Team' },
+  { id: 'kb', label: 'KB', adminOnly: true },
 ];
 
 const getRoleLabel = (role: string | null) => {
@@ -59,20 +60,22 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
         </div>
         
         <nav className="flex items-center gap-1">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onSectionChange(item.id)}
-              className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                activeSection === item.id
-                  ? 'bg-primary/20 text-foreground'
-                  : 'text-muted-foreground'
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
+          {navItems
+            .filter((item) => !item.adminOnly || userRole === 'admin')
+            .map((item) => (
+              <button
+                key={item.id}
+                onClick={() => onSectionChange(item.id)}
+                className={cn(
+                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                  activeSection === item.id
+                    ? 'bg-primary/20 text-foreground'
+                    : 'text-muted-foreground'
+                )}
+              >
+                {item.label}
+              </button>
+            ))}
         </nav>
       </div>
 

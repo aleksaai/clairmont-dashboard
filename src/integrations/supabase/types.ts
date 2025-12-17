@@ -119,6 +119,45 @@ export type Database = {
           },
         ]
       }
+      knowledge_base: {
+        Row: {
+          content: string | null
+          content_type: string
+          created_at: string
+          created_by: string | null
+          file_name: string | null
+          file_path: string | null
+          id: string
+          product_type: Database["public"]["Enums"]["product_type"] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          product_type?: Database["public"]["Enums"]["product_type"] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          product_type?: Database["public"]["Enums"]["product_type"] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       partner_codes: {
         Row: {
           code: string

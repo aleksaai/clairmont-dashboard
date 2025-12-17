@@ -19,9 +19,11 @@ interface EmailDialogProps {
   onClose: () => void;
   customerName: string;
   customerEmail: string | null;
+  productType?: string;
+  folderName?: string;
 }
 
-export function EmailDialog({ isOpen, onClose, customerName, customerEmail }: EmailDialogProps) {
+export function EmailDialog({ isOpen, onClose, customerName, customerEmail, productType, folderName }: EmailDialogProps) {
   const { toast } = useToast();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -46,6 +48,8 @@ export function EmailDialog({ isOpen, onClose, customerName, customerEmail }: Em
           prompt: aiPrompt,
           customerName,
           customerEmail: customerEmail || '',
+          productType: productType || null,
+          folderName: folderName || null,
         },
       });
 
