@@ -4,9 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Mail, Shield } from 'lucide-react';
+import { UserPlus, Mail, Shield, Trash2, Hash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAuth, AppRole } from '@/hooks/useAuth';
@@ -18,21 +19,24 @@ interface TeamMember {
   full_name: string | null;
   avatar_url: string | null;
   role: AppRole;
+  partner_code: string | null;
   created_at: string;
 }
 
 export function TeamView() {
-  const { role: currentUserRole } = useAuth();
+  const { role: currentUserRole, user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     email: '',
     fullName: '',
     password: '',
     role: 'vertriebler' as AppRole,
+    partnerCode: '',
   });
 
   const isAdmin = currentUserRole === 'admin';
@@ -55,14 +59,22 @@ export function TeamView() {
 
       if (rolesError) throw rolesError;
 
+      const { data: partnerCodes, error: partnerError } = await supabase
+        .from('partner_codes')
+        .select('user_id, code');
+
+      if (partnerError) console.error('Error fetching partner codes:', partnerError);
+
       const memberData: TeamMember[] = (profiles || []).map(profile => {
         const userRole = roles?.find(r => r.user_id === profile.id);
+        const userPartnerCode = partnerCodes?.find(p => p.user_id === profile.id);
         return {
           id: profile.id,
           email: profile.email,
           full_name: profile.full_name,
           avatar_url: profile.avatar_url,
           role: (userRole?.role as AppRole) || 'vertriebler',
+          partner_code: userPartnerCode?.code || null,
           created_at: profile.created_at || '',
         };
       });
@@ -84,6 +96,11 @@ export function TeamView() {
 
     if (formData.password.length < 6) {
       toast.error('Das Passwort muss mindestens 6 Zeichen lang sein');
+      return;
+    }
+
+    if (formData.role === 'vertriebler' && !formData.partnerCode) {
+      toast.error('Partnercode ist für Vertriebler erforderlich');
       return;
     }
 
@@ -111,13 +128,46 @@ export function TeamView() {
 
       toast.success('Benutzer wurde erfolgreich eingeladen');
       setInviteOpen(false);
-      setFormData({ email: '', fullName: '', password: '', role: 'vertriebler' });
+      setFormData({ email: '', fullName: '', password: '', role: 'vertriebler', partnerCode: '' });
       fetchMembers();
     } catch (error: any) {
       console.error('Error inviting user:', error);
       toast.error(error.message || 'Fehler beim Einladen des Benutzers');
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handleDelete = async (memberId: string) => {
+    setDeleting(memberId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ userId: memberId }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Löschen fehlgeschlagen');
+      }
+
+      toast.success('Benutzer wurde entfernt');
+      fetchMembers();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast.error(error.message || 'Fehler beim Entfernen des Benutzers');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -218,6 +268,20 @@ export function TeamView() {
                     </SelectContent>
                   </Select>
                 </div>
+                {formData.role === 'vertriebler' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="partnerCode">Partnercode</Label>
+                    <Input
+                      id="partnerCode"
+                      placeholder="z.B. MAX123"
+                      value={formData.partnerCode}
+                      onChange={(e) => setFormData(prev => ({ ...prev, partnerCode: e.target.value.toUpperCase() }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Eindeutiger Code zur Zuordnung von Kunden zu diesem Vertriebler
+                    </p>
+                  </div>
+                )}
                 <Button 
                   className="w-full" 
                   onClick={handleInvite}
@@ -265,12 +329,51 @@ export function TeamView() {
                           <Mail className="h-3 w-3" />
                           {member.email}
                         </p>
+                        {member.partner_code && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                            <Hash className="h-3 w-3" />
+                            {member.partner_code}
+                          </p>
+                        )}
                       </div>
                     </div>
-                    <Badge variant={getRoleBadgeVariant(member.role)}>
-                      <Shield className="h-3 w-3 mr-1" />
-                      {getRoleLabel(member.role)}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getRoleBadgeVariant(member.role)}>
+                        <Shield className="h-3 w-3 mr-1" />
+                        {getRoleLabel(member.role)}
+                      </Badge>
+                      {isAdmin && member.id !== user?.id && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={deleting === member.id}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Benutzer entfernen?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Möchten Sie <strong>{member.full_name || member.email}</strong> wirklich aus dem Team entfernen? Diese Aktion kann nicht rückgängig gemacht werden.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(member.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Entfernen
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

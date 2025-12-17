@@ -12,6 +12,7 @@ interface InviteRequest {
   fullName: string;
   password: string;
   role: 'admin' | 'sachbearbeiter' | 'vertriebler';
+  partnerCode?: string;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -48,10 +49,15 @@ serve(async (req: Request): Promise<Response> => {
       throw new Error("Nur Administratoren können Benutzer einladen");
     }
 
-    const { email, fullName, password, role }: InviteRequest = await req.json();
+    const { email, fullName, password, role, partnerCode }: InviteRequest = await req.json();
 
     if (!email || !fullName || !password || !role) {
       throw new Error("Alle Felder sind erforderlich");
+    }
+
+    // For Vertriebler, partner code is required
+    if (role === 'vertriebler' && !partnerCode) {
+      throw new Error("Partnercode ist für Vertriebler erforderlich");
     }
 
     // Create user with admin client
@@ -84,6 +90,17 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
+    // Create partner code entry if provided
+    if (partnerCode && newUser.user) {
+      const { error: partnerError } = await supabaseAdmin
+        .from('partner_codes')
+        .insert({ user_id: newUser.user.id, code: partnerCode });
+
+      if (partnerError) {
+        console.error("Error creating partner code:", partnerError);
+      }
+    }
+
     // Send invitation email
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
     
@@ -92,6 +109,10 @@ serve(async (req: Request): Promise<Response> => {
       'sachbearbeiter': 'Sachbearbeiter',
       'vertriebler': 'Vertriebler'
     };
+
+    const partnerCodeHtml = partnerCode 
+      ? `<p style="margin: 5px 0;"><strong>Partnercode:</strong> ${partnerCode}</p>` 
+      : '';
 
     const { error: emailError } = await resend.emails.send({
       from: "Clairmont Advisory <noreply@tax.clairmont-advisory.com>",
@@ -106,6 +127,7 @@ serve(async (req: Request): Promise<Response> => {
             <p style="margin: 5px 0;"><strong>E-Mail:</strong> ${email}</p>
             <p style="margin: 5px 0;"><strong>Passwort:</strong> ${password}</p>
             <p style="margin: 5px 0;"><strong>Rolle:</strong> ${roleNames[role]}</p>
+            ${partnerCodeHtml}
           </div>
           <p>Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.</p>
           <p style="margin-top: 30px;">Mit freundlichen Grüßen,<br>Das Clairmont Team</p>
