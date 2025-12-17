@@ -35,16 +35,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const htmlContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a1a;">Sehr geehrte/r ${customerName || 'Kunde'},</h2>
-        <div style="color: #333; line-height: 1.6; white-space: pre-wrap;">
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="color: #333; line-height: 1.8; white-space: pre-wrap; font-size: 15px;">
 ${message}
         </div>
-        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-        <p style="color: #666; font-size: 12px;">
-          Mit freundlichen Grüßen,<br/>
-          Ihr Team von Clairmont Advisory
-        </p>
       </div>
     `;
 

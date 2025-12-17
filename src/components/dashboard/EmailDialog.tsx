@@ -51,11 +51,14 @@ export function EmailDialog({ isOpen, onClose, customerName, customerEmail }: Em
 
       if (error) throw error;
 
-      if (data?.generatedText) {
-        setMessage(data.generatedText);
+      if (data?.message) {
+        setMessage(data.message);
+        if (data?.subject) {
+          setSubject(data.subject);
+        }
         toast({
           title: 'E-Mail generiert',
-          description: 'Die KI hat einen Entwurf erstellt. Du kannst ihn noch anpassen.',
+          description: 'Die KI hat Betreff und Nachricht erstellt. Du kannst sie noch anpassen.',
         });
       }
     } catch (error) {
