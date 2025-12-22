@@ -72,7 +72,11 @@ export type Database = {
           id: string
           name: string
           partner_code: string | null
+          payment_link_url: string | null
+          payment_status: string | null
           product: Database["public"]["Enums"]["product_type"]
+          prognose_amount: number | null
+          prognose_created_at: string | null
           status: Database["public"]["Enums"]["case_status"]
           updated_at: string
         }
@@ -85,7 +89,11 @@ export type Database = {
           id?: string
           name: string
           partner_code?: string | null
+          payment_link_url?: string | null
+          payment_status?: string | null
           product?: Database["public"]["Enums"]["product_type"]
+          prognose_amount?: number | null
+          prognose_created_at?: string | null
           status?: Database["public"]["Enums"]["case_status"]
           updated_at?: string
         }
@@ -98,7 +106,11 @@ export type Database = {
           id?: string
           name?: string
           partner_code?: string | null
+          payment_link_url?: string | null
+          payment_status?: string | null
           product?: Database["public"]["Enums"]["product_type"]
+          prognose_amount?: number | null
+          prognose_created_at?: string | null
           status?: Database["public"]["Enums"]["case_status"]
           updated_at?: string
         }

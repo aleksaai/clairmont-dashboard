@@ -21,15 +21,84 @@ interface EmailDialogProps {
   customerEmail: string | null;
   productType?: string;
   folderName?: string;
+  isOfferMode?: boolean;
+  prognoseAmount?: number | null;
+  paymentLinkUrl?: string | null;
 }
 
-export function EmailDialog({ isOpen, onClose, customerName, customerEmail, productType, folderName }: EmailDialogProps) {
+export function EmailDialog({ 
+  isOpen, 
+  onClose, 
+  customerName, 
+  customerEmail, 
+  productType, 
+  folderName,
+  isOfferMode = false,
+  prognoseAmount,
+  paymentLinkUrl,
+}: EmailDialogProps) {
   const { toast } = useToast();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
+
+  // Auto-generate offer email when in offer mode
+  const handleGenerateOfferEmail = async () => {
+    if (!prognoseAmount || !paymentLinkUrl) return;
+    
+    const feeAmount = prognoseAmount * 0.30;
+    const offerPrompt = `Erstelle ein Angebot für den Kunden. Die Prognose für die Steuererstattung beträgt ${prognoseAmount.toFixed(2)} €. Die Beratungsgebühr beträgt ${feeAmount.toFixed(2)} € (30% der Erstattung). Füge einen Hinweis ein, dass der Kunde über den folgenden Link bezahlen kann: ${paymentLinkUrl}`;
+    
+    setAiPrompt(offerPrompt);
+    
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-email', {
+        body: {
+          prompt: offerPrompt,
+          customerName,
+          customerEmail: customerEmail || '',
+          productType: productType || null,
+          folderName: folderName || null,
+          isOffer: true,
+          prognoseAmount,
+          feeAmount,
+          paymentLinkUrl,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.message) {
+        setMessage(data.message);
+        if (data?.subject) {
+          setSubject(data.subject);
+        }
+        toast({
+          title: 'Angebots-E-Mail generiert',
+          description: 'Du kannst das Angebot noch anpassen bevor du es sendest.',
+        });
+      }
+    } catch (error) {
+      console.error('Error generating offer email:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Das Angebot konnte nicht generiert werden.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Auto-generate on open in offer mode
+  useState(() => {
+    if (isOfferMode && prognoseAmount && paymentLinkUrl && !message) {
+      handleGenerateOfferEmail();
+    }
+  });
 
   const handleGenerateEmail = async () => {
     if (!aiPrompt.trim()) {

@@ -18,9 +18,10 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Upload, FileText, ChevronRight, Folder, Image, FileSpreadsheet, FileType, File, FileVideo, FileAudio, FileArchive, FileCode, Presentation, Mail } from 'lucide-react';
+import { Plus, Upload, FileText, ChevronRight, Folder, Image, FileSpreadsheet, FileType, File, FileVideo, FileAudio, FileArchive, FileCode, Presentation, Mail, Calculator, Send, Loader2, Euro, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { EmailDialog } from './EmailDialog';
+import { PrognoseDialog } from './PrognoseDialog';
 
 type CaseStatus = 'neu' | 'bezahlt' | 'in_bearbeitung' | 'abgeschlossen' | 'einspruch' | 'anfrage_eingegangen' | 'prognose_erstellt' | 'angebot_gesendet' | 'anzahlung_erhalten' | 'einspruch_nacharbeit';
 type ProductType = 'steuern' | 'kredit' | 'versicherung';
@@ -34,6 +35,10 @@ interface FolderData {
   product: ProductType;
   partner_code: string | null;
   created_at: string;
+  prognose_amount: number | null;
+  prognose_created_at: string | null;
+  payment_link_url: string | null;
+  payment_status: string | null;
 }
 
 interface Document {
@@ -144,6 +149,9 @@ export function OrdnerView() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isEmailOpen, setIsEmailOpen] = useState(false);
+  const [isPrognoseOpen, setIsPrognoseOpen] = useState(false);
+  const [isOfferMode, setIsOfferMode] = useState(false);
+  const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
   
   // Form state
   const [customerName, setCustomerName] = useState('');
@@ -287,6 +295,73 @@ export function OrdnerView() {
     URL.revokeObjectURL(url);
   };
 
+  const handlePrognoseUpdated = (amount: number) => {
+    if (selectedFolder) {
+      setSelectedFolder({ 
+        ...selectedFolder, 
+        prognose_amount: amount,
+        prognose_created_at: new Date().toISOString(),
+        status: 'prognose_erstellt'
+      });
+      fetchFolders();
+    }
+  };
+
+  const handleSendOffer = async () => {
+    if (!selectedFolder?.prognose_amount || !selectedFolder?.customer_email) {
+      toast({
+        title: 'Fehler',
+        description: selectedFolder?.customer_email 
+          ? 'Bitte erstelle zuerst eine Prognose.' 
+          : 'Keine E-Mail-Adresse hinterlegt.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGeneratingPaymentLink(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-payment-link', {
+        body: {
+          folderId: selectedFolder.id,
+          customerName: selectedFolder.customer_name,
+          customerEmail: selectedFolder.customer_email,
+          prognoseAmount: selectedFolder.prognose_amount,
+        },
+      });
+
+      if (error) throw error;
+
+      // Update local state with payment info
+      setSelectedFolder({
+        ...selectedFolder,
+        payment_link_url: data.url,
+        payment_status: 'pending',
+        status: 'angebot_gesendet',
+      });
+
+      // Open email dialog in offer mode
+      setIsOfferMode(true);
+      setIsEmailOpen(true);
+      
+      toast({
+        title: 'Zahlungslink erstellt',
+        description: `Gebühr: ${data.feeAmount.toFixed(2)} € (30% von ${data.prognoseAmount.toFixed(2)} €)`,
+      });
+      
+      fetchFolders();
+    } catch (error) {
+      console.error('Error creating payment link:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Der Zahlungslink konnte nicht erstellt werden.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingPaymentLink(false);
+    }
+  };
+
   const goBack = () => {
     if (selectedFolder) {
       setSelectedFolder(null);
@@ -378,9 +453,46 @@ export function OrdnerView() {
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Prognose Button - only for Steuern */}
+            {selectedFolder.product === 'steuern' && (
+              <Button 
+                variant="outline" 
+                onClick={() => setIsPrognoseOpen(true)}
+                className="border-border"
+              >
+                <Calculator className="w-4 h-4 mr-2" />
+                Prognose
+              </Button>
+            )}
+
+            {/* Angebot senden Button - only if prognose exists */}
+            {selectedFolder.product === 'steuern' && selectedFolder.prognose_amount && (
+              <Button 
+                variant="default" 
+                onClick={handleSendOffer}
+                disabled={isGeneratingPaymentLink || !selectedFolder.customer_email}
+                className="bg-primary"
+              >
+                {isGeneratingPaymentLink ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Erstelle Link...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Angebot senden
+                  </>
+                )}
+              </Button>
+            )}
+            
             <Button 
               variant="outline" 
-              onClick={() => setIsEmailOpen(true)}
+              onClick={() => {
+                setIsOfferMode(false);
+                setIsEmailOpen(true);
+              }}
               className="border-border"
             >
               <Mail className="w-4 h-4 mr-2" />
@@ -421,14 +533,56 @@ export function OrdnerView() {
 
         {/* Customer Info */}
         <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4">
-          <h3 className="font-semibold text-foreground">{selectedFolder.customer_name}</h3>
-          {selectedFolder.customer_email && (
-            <p className="text-sm text-muted-foreground">{selectedFolder.customer_email}</p>
-          )}
-          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-            <span>Erstellt: {new Date(selectedFolder.created_at).toLocaleDateString('de-DE')}</span>
-            <span className="text-muted-foreground/50">|</span>
-            <span>Partnercode: {selectedFolder.partner_code || '—'}</span>
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-semibold text-foreground">{selectedFolder.customer_name}</h3>
+              {selectedFolder.customer_email && (
+                <p className="text-sm text-muted-foreground">{selectedFolder.customer_email}</p>
+              )}
+              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                <span>Erstellt: {new Date(selectedFolder.created_at).toLocaleDateString('de-DE')}</span>
+                <span className="text-muted-foreground/50">|</span>
+                <span>Partnercode: {selectedFolder.partner_code || '—'}</span>
+              </div>
+            </div>
+            
+            {/* Prognose Display - only for Steuern */}
+            {selectedFolder.product === 'steuern' && selectedFolder.prognose_amount && (
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-right min-w-[200px]">
+                <div className="flex items-center justify-end gap-2 mb-1">
+                  <Euro className="w-4 h-4 text-primary" />
+                  <span className="text-xs text-muted-foreground">Prognose</span>
+                </div>
+                <p className="text-lg font-bold text-foreground">
+                  {selectedFolder.prognose_amount.toFixed(2)} €
+                </p>
+                <p className="text-sm text-primary font-medium">
+                  Gebühr: {(selectedFolder.prognose_amount * 0.30).toFixed(2)} €
+                </p>
+                {selectedFolder.payment_status && (
+                  <div className="flex items-center justify-end gap-1 mt-2 text-xs">
+                    {selectedFolder.payment_status === 'paid' && (
+                      <>
+                        <CheckCircle className="w-3 h-3 text-green-500" />
+                        <span className="text-green-500">Bezahlt</span>
+                      </>
+                    )}
+                    {selectedFolder.payment_status === 'pending' && (
+                      <>
+                        <Clock className="w-3 h-3 text-yellow-500" />
+                        <span className="text-yellow-500">Ausstehend</span>
+                      </>
+                    )}
+                    {selectedFolder.payment_status === 'failed' && (
+                      <>
+                        <XCircle className="w-3 h-3 text-destructive" />
+                        <span className="text-destructive">Fehlgeschlagen</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -469,11 +623,27 @@ export function OrdnerView() {
         {/* Email Dialog */}
         <EmailDialog
           isOpen={isEmailOpen}
-          onClose={() => setIsEmailOpen(false)}
+          onClose={() => {
+            setIsEmailOpen(false);
+            setIsOfferMode(false);
+          }}
           customerName={selectedFolder.customer_name}
           customerEmail={selectedFolder.customer_email}
           productType={selectedFolder.product}
           folderName={selectedFolder.name}
+          isOfferMode={isOfferMode}
+          prognoseAmount={selectedFolder.prognose_amount}
+          paymentLinkUrl={selectedFolder.payment_link_url}
+        />
+        
+        {/* Prognose Dialog */}
+        <PrognoseDialog
+          isOpen={isPrognoseOpen}
+          onClose={() => setIsPrognoseOpen(false)}
+          folderId={selectedFolder.id}
+          customerName={selectedFolder.customer_name}
+          currentPrognose={selectedFolder.prognose_amount}
+          onPrognoseUpdated={handlePrognoseUpdated}
         />
       </div>
     );
