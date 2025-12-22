@@ -9,6 +9,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Calculator, Loader2, Euro } from 'lucide-react';
@@ -22,6 +29,8 @@ interface PrognoseDialogProps {
   onPrognoseUpdated: (amount: number) => void;
 }
 
+type InstallmentOption = 'sofort' | '2' | '3' | '6';
+
 export function PrognoseDialog({ 
   isOpen, 
   onClose, 
@@ -32,10 +41,17 @@ export function PrognoseDialog({
 }: PrognoseDialogProps) {
   const { toast } = useToast();
   const [amount, setAmount] = useState(currentPrognose?.toString() || '');
+  const [installments, setInstallments] = useState<InstallmentOption>('sofort');
   const [isSaving, setIsSaving] = useState(false);
 
   const parsedAmount = parseFloat(amount.replace(',', '.')) || 0;
   const feeAmount = parsedAmount * 0.30;
+  
+  // Calculate installment fee: 10€ per month for installment payments
+  const installmentCount = installments === 'sofort' ? 1 : parseInt(installments);
+  const installmentFee = installments !== 'sofort' ? installmentCount * 10 : 0;
+  const totalFee = feeAmount + installmentFee;
+  const perInstallmentAmount = installments !== 'sofort' ? totalFee / installmentCount : totalFee;
 
   const handleSave = async () => {
     if (parsedAmount <= 0) {
@@ -55,6 +71,8 @@ export function PrognoseDialog({
           prognose_amount: parsedAmount,
           prognose_created_at: new Date().toISOString(),
           status: 'prognose_erstellt',
+          installment_count: installmentCount,
+          installment_fee: installmentFee,
         })
         .eq('id', folderId);
 
@@ -81,6 +99,7 @@ export function PrognoseDialog({
 
   const handleClose = () => {
     setAmount(currentPrognose?.toString() || '');
+    setInstallments('sofort');
     onClose();
   };
 
@@ -112,6 +131,22 @@ export function PrognoseDialog({
             </div>
           </div>
 
+          {/* Installment Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="installments">Zahlungsart</Label>
+            <Select value={installments} onValueChange={(v) => setInstallments(v as InstallmentOption)}>
+              <SelectTrigger className="bg-input/50 border-border">
+                <SelectValue placeholder="Zahlungsart wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sofort">Sofortzahlung</SelectItem>
+                <SelectItem value="2">2 Raten (+20€ Aufschlag)</SelectItem>
+                <SelectItem value="3">3 Raten (+30€ Aufschlag)</SelectItem>
+                <SelectItem value="6">6 Raten (+60€ Aufschlag)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Fee Calculation Display */}
           {parsedAmount > 0 && (
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-2">
@@ -121,19 +156,38 @@ export function PrognoseDialog({
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Beratungsgebühr (30%):</span>
-                <span className="font-semibold text-primary">{feeAmount.toFixed(2)} €</span>
+                <span className="font-medium">{feeAmount.toFixed(2)} €</span>
               </div>
+              {installments !== 'sofort' && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Ratenaufschlag ({installmentCount}x 10€):</span>
+                  <span className="font-medium">{installmentFee.toFixed(2)} €</span>
+                </div>
+              )}
               <div className="border-t border-primary/20 pt-2 mt-2">
                 <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Gesamtgebühr:</span>
+                  <span className="font-semibold text-primary">{totalFee.toFixed(2)} €</span>
+                </div>
+                {installments !== 'sofort' && (
+                  <div className="flex justify-between text-sm mt-1">
+                    <span className="text-muted-foreground">Pro Rate:</span>
+                    <span className="font-medium">{perInstallmentAmount.toFixed(2)} € × {installmentCount}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm mt-2">
                   <span className="text-muted-foreground">Netto für Kunden:</span>
-                  <span className="font-medium">{(parsedAmount - feeAmount).toFixed(2)} €</span>
+                  <span className="font-medium">{(parsedAmount - totalFee).toFixed(2)} €</span>
                 </div>
               </div>
             </div>
           )}
 
           <p className="text-xs text-muted-foreground">
-            Die Gebühr von 30% wird dem Kunden als Zahlungslink gesendet.
+            {installments === 'sofort' 
+              ? 'Die Gebühr wird dem Kunden als einmaliger Zahlungslink gesendet.'
+              : `Der Kunde erhält ${installmentCount} monatliche Zahlungsaufforderungen.`
+            }
           </p>
         </div>
 
