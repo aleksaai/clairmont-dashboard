@@ -23,7 +23,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { EmailDialog } from './EmailDialog';
 import { PrognoseDialog } from './PrognoseDialog';
 
-type CaseStatus = 'neu' | 'bezahlt' | 'in_bearbeitung' | 'abgeschlossen' | 'einspruch' | 'anfrage_eingegangen' | 'prognose_erstellt' | 'angebot_gesendet' | 'anzahlung_erhalten' | 'einspruch_nacharbeit';
+// Include all database enum values for type compatibility, but only show relevant ones in UI
+type CaseStatus = 'neu' | 'bezahlt' | 'in_bearbeitung' | 'abgeschlossen' | 'einspruch' | 'anfrage_eingegangen' | 'prognose_erstellt' | 'angebot_gesendet' | 'anzahlung_erhalten' | 'einspruch_nacharbeit' | 'rueckstand';
 type ProductType = 'steuern' | 'kredit' | 'versicherung';
 
 interface FolderData {
@@ -53,9 +54,9 @@ interface Document {
 
 // Status options per product
 const productStatuses: Record<ProductType, CaseStatus[]> = {
-  steuern: ['anfrage_eingegangen', 'prognose_erstellt', 'angebot_gesendet', 'bezahlt', 'anzahlung_erhalten', 'in_bearbeitung', 'abgeschlossen', 'einspruch_nacharbeit'],
-  kredit: ['neu', 'bezahlt', 'in_bearbeitung', 'abgeschlossen', 'einspruch'],
-  versicherung: ['neu', 'bezahlt', 'in_bearbeitung', 'abgeschlossen', 'einspruch'],
+  steuern: ['anfrage_eingegangen', 'prognose_erstellt', 'angebot_gesendet', 'anzahlung_erhalten', 'rueckstand', 'bezahlt', 'einspruch_nacharbeit'],
+  kredit: ['neu', 'anzahlung_erhalten', 'rueckstand', 'bezahlt', 'einspruch'],
+  versicherung: ['neu', 'anzahlung_erhalten', 'rueckstand', 'bezahlt', 'einspruch'],
 };
 
 const statusLabels: Record<CaseStatus, string> = {
@@ -68,6 +69,7 @@ const statusLabels: Record<CaseStatus, string> = {
   prognose_erstellt: 'Prognose erstellt',
   angebot_gesendet: 'Angebot gesendet',
   anzahlung_erhalten: 'Anzahlung erhalten',
+  rueckstand: 'Rückstand',
   einspruch_nacharbeit: 'Einspruch / Nacharbeit',
 };
 

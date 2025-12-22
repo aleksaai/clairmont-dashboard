@@ -111,6 +111,7 @@ serve(async (req) => {
         const customerName = session.metadata?.customer_name;
         const prognoseAmount = session.metadata?.prognose_amount;
         const feeAmount = session.metadata?.fee_amount || session.metadata?.total_fee;
+        const installmentCount = parseInt(session.metadata?.installment_count || "1", 10);
 
         if (!folderId) {
           logStep("No folder_id in metadata, skipping");
@@ -124,15 +125,19 @@ serve(async (req) => {
           folderId, 
           customerName, 
           prognoseAmount, 
-          feeAmount 
+          feeAmount,
+          installmentCount
         });
 
-        // Update folder status to "bezahlt"
+        // Determine status: "anzahlung_erhalten" for installments, "bezahlt" for one-time
+        const newStatus = installmentCount > 1 ? "anzahlung_erhalten" : "bezahlt";
+
+        // Update folder status
         const { error: updateError } = await supabaseClient
           .from("folders")
           .update({
             payment_status: "paid",
-            status: "bezahlt",
+            status: newStatus,
           })
           .eq("id", folderId);
 
@@ -141,7 +146,7 @@ serve(async (req) => {
           throw new Error(`Failed to update folder: ${updateError.message}`);
         }
 
-        logStep("Folder updated successfully", { folderId, newStatus: "bezahlt" });
+        logStep("Folder updated successfully", { folderId, newStatus });
 
         // Send email notification to Clairmont team
         if (resendApiKey) {
@@ -217,6 +222,70 @@ serve(async (req) => {
         }
       } else {
         logStep("Payment not yet paid", { paymentStatus: session.payment_status });
+      }
+    }
+
+    // Handle invoice.payment_failed - payment failed for subscription
+    if (event.type === "invoice.payment_failed") {
+      const invoice = event.data.object as Stripe.Invoice;
+      logStep("Invoice payment failed", { 
+        invoiceId: invoice.id, 
+        subscriptionId: invoice.subscription,
+        metadata: invoice.subscription_details?.metadata 
+      });
+
+      const folderId = invoice.subscription_details?.metadata?.folder_id;
+      
+      if (folderId) {
+        const supabaseClient = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          { auth: { persistSession: false } }
+        );
+
+        const { error: updateError } = await supabaseClient
+          .from("folders")
+          .update({ status: "rueckstand" })
+          .eq("id", folderId);
+
+        if (updateError) {
+          logStep("Error updating folder to rueckstand", { error: updateError.message });
+        } else {
+          logStep("Folder updated to rueckstand", { folderId });
+        }
+      }
+    }
+
+    // Handle customer.subscription.deleted - subscription completed or cancelled
+    if (event.type === "customer.subscription.deleted") {
+      const subscription = event.data.object as Stripe.Subscription;
+      logStep("Subscription deleted", { 
+        subscriptionId: subscription.id, 
+        status: subscription.status,
+        cancelReason: subscription.cancellation_details?.reason,
+        metadata: subscription.metadata 
+      });
+
+      const folderId = subscription.metadata?.folder_id;
+      
+      // Only update to "bezahlt" if subscription ended normally (not due to payment failure)
+      if (folderId && subscription.cancellation_details?.reason !== "payment_failed") {
+        const supabaseClient = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          { auth: { persistSession: false } }
+        );
+
+        const { error: updateError } = await supabaseClient
+          .from("folders")
+          .update({ status: "bezahlt" })
+          .eq("id", folderId);
+
+        if (updateError) {
+          logStep("Error updating folder to bezahlt", { error: updateError.message });
+        } else {
+          logStep("Folder updated to bezahlt after subscription completed", { folderId });
+        }
       }
     }
 
