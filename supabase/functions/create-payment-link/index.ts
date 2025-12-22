@@ -67,7 +67,8 @@ serve(async (req) => {
     }
 
     // Create a Checkout session with dynamic price
-    const origin = req.headers.get("origin") || "https://your-app.lovable.app";
+    // Use Clairmont website for success/cancel redirects - customer should NOT see the internal software
+    const clairmontWebsite = "https://clairmont-advisory.com";
     
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -86,8 +87,8 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
-      success_url: `${origin}/?payment=success&folder=${folderId}`,
-      cancel_url: `${origin}/?payment=cancelled&folder=${folderId}`,
+      success_url: `${clairmontWebsite}`,
+      cancel_url: `${clairmontWebsite}`,
       metadata: {
         folder_id: folderId,
         customer_name: customerName,
