@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -94,11 +94,11 @@ export function EmailDialog({
   };
 
   // Auto-generate on open in offer mode
-  useState(() => {
-    if (isOfferMode && prognoseAmount && paymentLinkUrl && !message) {
+  useEffect(() => {
+    if (isOpen && isOfferMode && prognoseAmount && paymentLinkUrl && !message) {
       handleGenerateOfferEmail();
     }
-  });
+  }, [isOpen, isOfferMode]);
 
   const handleGenerateEmail = async () => {
     if (!aiPrompt.trim()) {
