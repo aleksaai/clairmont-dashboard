@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.credit-webhook]
 verify_jwt = false
+
+[functions.create-payment-link]
+verify_jwt = false
