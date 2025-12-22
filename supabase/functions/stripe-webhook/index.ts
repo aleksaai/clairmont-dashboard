@@ -175,6 +175,12 @@ serve(async (req) => {
             const formattedFee = feeAmount ? parseFloat(feeAmount).toFixed(2).replace('.', ',') : 'N/A';
             const formattedPrognose = prognoseAmount ? parseFloat(prognoseAmount).toFixed(2).replace('.', ',') : 'N/A';
             
+            // Calculate installment amount if applicable
+            const isInstallment = installmentCount > 1;
+            const installmentAmount = isInstallment && feeAmount 
+              ? (parseFloat(feeAmount) / installmentCount).toFixed(2).replace('.', ',') 
+              : null;
+            
             const teamEmail = "aleksa@spalevic-consulting.de";
             
             // Email to team
@@ -183,7 +189,7 @@ serve(async (req) => {
                 <h2 style="color: #16a34a; margin-bottom: 24px;">✓ Zahlung eingegangen!</h2>
                 
                 <p style="font-size: 16px; color: #333; line-height: 1.6;">
-                  Gute Nachrichten! Der Kunde <strong>${customerName || 'Unbekannt'}</strong> hat soeben die Zahlung abgeschlossen.
+                  Gute Nachrichten! Der Kunde <strong>${customerName || 'Unbekannt'}</strong> hat soeben ${isInstallment ? 'die erste Rate bezahlt' : 'die Zahlung abgeschlossen'}.
                 </p>
                 
                 <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0;">
@@ -197,19 +203,38 @@ serve(async (req) => {
                       <td style="padding: 8px 0; color: #6b7280;">Prognose:</td>
                       <td style="padding: 8px 0; color: #111827; font-weight: 600;">${formattedPrognose} €</td>
                     </tr>
+                    ${isInstallment ? `
+                    <tr>
+                      <td style="padding: 8px 0; color: #6b7280;">Zahlungsart:</td>
+                      <td style="padding: 8px 0; color: #111827; font-weight: 600;">Ratenzahlung (${installmentCount} Monate)</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #6b7280;">Gesamtgebühr (30%):</td>
+                      <td style="padding: 8px 0; color: #111827; font-weight: 600;">${formattedFee} €</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #6b7280;">Gezahlte 1. Rate:</td>
+                      <td style="padding: 8px 0; color: #16a34a; font-weight: 600;">${installmentAmount} € ✓</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #6b7280;">Ausstehend:</td>
+                      <td style="padding: 8px 0; color: #f59e0b; font-weight: 600;">${installmentCount - 1} weitere Raten</td>
+                    </tr>
+                    ` : `
                     <tr>
                       <td style="padding: 8px 0; color: #6b7280;">Gezahlte Gebühr (30%):</td>
                       <td style="padding: 8px 0; color: #16a34a; font-weight: 600;">${formattedFee} €</td>
                     </tr>
+                    `}
                     <tr>
                       <td style="padding: 8px 0; color: #6b7280;">Status:</td>
-                      <td style="padding: 8px 0; color: #16a34a; font-weight: 600;">${installmentCount > 1 ? 'Anzahlung erhalten' : 'Bezahlt'} ✓</td>
+                      <td style="padding: 8px 0; color: #16a34a; font-weight: 600;">${isInstallment ? 'Anzahlung erhalten' : 'Bezahlt'} ✓</td>
                     </tr>
                   </table>
                 </div>
                 
                 <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">
-                  Der Fall wurde automatisch auf "${installmentCount > 1 ? 'Anzahlung erhalten' : 'Bezahlt'}" gesetzt und kann nun weiter bearbeitet werden.
+                  Der Fall wurde automatisch auf "${isInstallment ? 'Anzahlung erhalten' : 'Bezahlt'}" gesetzt und kann nun weiter bearbeitet werden.
                 </p>
                 
                 <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
