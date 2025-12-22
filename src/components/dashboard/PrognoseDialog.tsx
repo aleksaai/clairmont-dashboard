@@ -26,7 +26,8 @@ interface PrognoseDialogProps {
   folderId: string;
   customerName: string;
   currentPrognose?: number | null;
-  onPrognoseUpdated: (amount: number) => void;
+  currentInstallments?: number | null;
+  onPrognoseUpdated: (amount: number, installmentCount: number, installmentFee: number) => void;
 }
 
 type InstallmentOption = 'sofort' | '2' | '3' | '6';
@@ -37,11 +38,16 @@ export function PrognoseDialog({
   folderId, 
   customerName, 
   currentPrognose,
+  currentInstallments,
   onPrognoseUpdated 
 }: PrognoseDialogProps) {
   const { toast } = useToast();
   const [amount, setAmount] = useState(currentPrognose?.toString() || '');
-  const [installments, setInstallments] = useState<InstallmentOption>('sofort');
+  const getInitialInstallments = (): InstallmentOption => {
+    if (!currentInstallments || currentInstallments === 1) return 'sofort';
+    return currentInstallments.toString() as InstallmentOption;
+  };
+  const [installments, setInstallments] = useState<InstallmentOption>(getInitialInstallments());
   const [isSaving, setIsSaving] = useState(false);
 
   const parsedAmount = parseFloat(amount.replace(',', '.')) || 0;
@@ -83,7 +89,7 @@ export function PrognoseDialog({
         description: `Prognose von ${parsedAmount.toFixed(2)} € wurde gespeichert.`,
       });
       
-      onPrognoseUpdated(parsedAmount);
+      onPrognoseUpdated(parsedAmount, installmentCount, installmentFee);
       handleClose();
     } catch (error) {
       console.error('Error saving prognose:', error);

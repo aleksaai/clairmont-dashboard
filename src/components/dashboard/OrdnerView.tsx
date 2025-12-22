@@ -39,6 +39,8 @@ interface FolderData {
   prognose_created_at: string | null;
   payment_link_url: string | null;
   payment_status: string | null;
+  installment_count: number | null;
+  installment_fee: number | null;
 }
 
 interface Document {
@@ -295,13 +297,15 @@ export function OrdnerView() {
     URL.revokeObjectURL(url);
   };
 
-  const handlePrognoseUpdated = (amount: number) => {
+  const handlePrognoseUpdated = (amount: number, installmentCount: number, installmentFee: number) => {
     if (selectedFolder) {
       setSelectedFolder({ 
         ...selectedFolder, 
         prognose_amount: amount,
         prognose_created_at: new Date().toISOString(),
-        status: 'prognose_erstellt'
+        status: 'prognose_erstellt',
+        installment_count: installmentCount,
+        installment_fee: installmentFee,
       });
       fetchFolders();
     }
@@ -327,8 +331,8 @@ export function OrdnerView() {
           customerName: selectedFolder.customer_name,
           customerEmail: selectedFolder.customer_email,
           prognoseAmount: selectedFolder.prognose_amount,
-          installmentCount: (selectedFolder as any).installment_count || 1,
-          installmentFee: (selectedFolder as any).installment_fee || 0,
+          installmentCount: selectedFolder.installment_count || 1,
+          installmentFee: selectedFolder.installment_fee || 0,
         },
       });
 
@@ -655,6 +659,7 @@ export function OrdnerView() {
           folderId={selectedFolder.id}
           customerName={selectedFolder.customer_name}
           currentPrognose={selectedFolder.prognose_amount}
+          currentInstallments={selectedFolder.installment_count}
           onPrognoseUpdated={handlePrognoseUpdated}
         />
       </div>
