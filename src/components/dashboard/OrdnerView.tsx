@@ -375,6 +375,21 @@ export function OrdnerView() {
     }
   };
 
+  const handleEmailSent = async (wasOfferEmail: boolean) => {
+    // Update status to "angebot_gesendet" when an offer email is sent
+    if (wasOfferEmail && selectedFolder && selectedFolder.status === 'prognose_erstellt') {
+      const { error } = await supabase
+        .from('folders')
+        .update({ status: 'angebot_gesendet' })
+        .eq('id', selectedFolder.id);
+      
+      if (!error) {
+        setSelectedFolder({ ...selectedFolder, status: 'angebot_gesendet' });
+        fetchFolders();
+      }
+    }
+  };
+
   const goBack = () => {
     if (selectedFolder) {
       setSelectedFolder(null);
@@ -671,6 +686,7 @@ export function OrdnerView() {
           isOfferMode={isOfferMode}
           prognoseAmount={selectedFolder.prognose_amount}
           paymentLinkUrl={selectedFolder.payment_link_url}
+          onEmailSent={handleEmailSent}
         />
         
         {/* Prognose Dialog */}

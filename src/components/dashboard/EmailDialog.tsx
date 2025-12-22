@@ -25,6 +25,7 @@ interface EmailDialogProps {
   isOfferMode?: boolean;
   prognoseAmount?: number | null;
   paymentLinkUrl?: string | null;
+  onEmailSent?: (wasOfferEmail: boolean) => void;
 }
 
 export function EmailDialog({ 
@@ -37,6 +38,7 @@ export function EmailDialog({
   isOfferMode = false,
   prognoseAmount,
   paymentLinkUrl,
+  onEmailSent,
 }: EmailDialogProps) {
   const { toast } = useToast();
   const [subject, setSubject] = useState('');
@@ -185,6 +187,9 @@ export function EmailDialog({
         title: 'E-Mail gesendet',
         description: `Die E-Mail wurde erfolgreich an ${customerEmail} gesendet.`,
       });
+      
+      // Notify parent that email was sent
+      onEmailSent?.(isOfferMode);
       
       // Reset and close
       setSubject('');
