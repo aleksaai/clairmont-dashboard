@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Upload, FileText, ChevronRight, Folder, Image, FileSpreadsheet, FileType, File, FileVideo, FileAudio, FileArchive, FileCode, Presentation, Mail, Calculator, Send, Loader2, Euro, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Plus, Upload, FileText, ChevronRight, Folder, Image, FileSpreadsheet, FileType, File, FileVideo, FileAudio, FileArchive, FileCode, Presentation, Mail, Calculator, Send, Loader2, Copy, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { EmailDialog } from './EmailDialog';
 import { PrognoseDialog } from './PrognoseDialog';
@@ -486,6 +486,38 @@ export function OrdnerView() {
                 )}
               </Button>
             )}
+
+            {/* Payment link actions */}
+            {selectedFolder.payment_link_url && (
+              <>
+                <Button
+                  variant="outline"
+                  className="border-border"
+                  onClick={() => window.open(selectedFolder.payment_link_url!, '_blank', 'noopener,noreferrer')}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Zahlungslink
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-border"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(selectedFolder.payment_link_url!);
+                      toast({ title: 'Zahlungslink kopiert' });
+                    } catch (e) {
+                      toast({
+                        title: 'Fehler',
+                        description: 'Kopieren nicht möglich.',
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </>
+            )}
             
             <Button 
               variant="outline" 
@@ -548,10 +580,13 @@ export function OrdnerView() {
                 <span className="text-muted-foreground/50">|</span>
                 <span className="text-primary">Gebühr: {(selectedFolder.prognose_amount * 0.30).toFixed(2)} €</span>
                 {selectedFolder.payment_status === 'pending' && (
-                  <span className="text-yellow-500">(Ausstehend)</span>
+                  <span className="text-muted-foreground">(Ausstehend)</span>
                 )}
                 {selectedFolder.payment_status === 'paid' && (
-                  <span className="text-green-500">(Bezahlt)</span>
+                  <span className="text-primary">(Bezahlt)</span>
+                )}
+                {selectedFolder.payment_status === 'failed' && (
+                  <span className="text-destructive">(Fehlgeschlagen)</span>
                 )}
               </>
             )}
