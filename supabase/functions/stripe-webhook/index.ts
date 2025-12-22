@@ -148,7 +148,16 @@ serve(async (req) => {
 
         logStep("Folder updated successfully", { folderId, newStatus });
 
-        // Send email notification to Clairmont team
+        // Get customer email from folder
+        const { data: folderData } = await supabaseClient
+          .from("folders")
+          .select("customer_email")
+          .eq("id", folderId)
+          .maybeSingle();
+
+        const customerEmail = folderData?.customer_email;
+
+        // Send email notifications
         if (resendApiKey) {
           try {
             const resend = new Resend(resendApiKey);
@@ -158,7 +167,8 @@ serve(async (req) => {
             
             const teamEmail = "aleksa@spalevic-consulting.de";
             
-            const emailHtml = `
+            // Email to team
+            const teamEmailHtml = `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                 <h2 style="color: #16a34a; margin-bottom: 24px;">✓ Zahlung eingegangen!</h2>
                 
@@ -183,13 +193,13 @@ serve(async (req) => {
                     </tr>
                     <tr>
                       <td style="padding: 8px 0; color: #6b7280;">Status:</td>
-                      <td style="padding: 8px 0; color: #16a34a; font-weight: 600;">Bezahlt ✓</td>
+                      <td style="padding: 8px 0; color: #16a34a; font-weight: 600;">${installmentCount > 1 ? 'Anzahlung erhalten' : 'Bezahlt'} ✓</td>
                     </tr>
                   </table>
                 </div>
                 
                 <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">
-                  Der Fall wurde automatisch auf "Bezahlt" gesetzt und kann nun weiter bearbeitet werden.
+                  Der Fall wurde automatisch auf "${installmentCount > 1 ? 'Anzahlung erhalten' : 'Bezahlt'}" gesetzt und kann nun weiter bearbeitet werden.
                 </p>
                 
                 <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
@@ -200,17 +210,82 @@ serve(async (req) => {
               </div>
             `;
 
-            const { error: emailError } = await resend.emails.send({
+            const { error: teamEmailError } = await resend.emails.send({
               from: "Clairmont Advisory <noreply@tax.clairmont-advisory.com>",
               to: [teamEmail],
               subject: `✓ Zahlung eingegangen: ${customerName || 'Kunde'}`,
-              html: emailHtml,
+              html: teamEmailHtml,
             });
 
-            if (emailError) {
-              logStep("Error sending notification email", { error: emailError });
+            if (teamEmailError) {
+              logStep("Error sending team notification email", { error: teamEmailError });
             } else {
-              logStep("Notification email sent successfully", { to: teamEmail });
+              logStep("Team notification email sent successfully", { to: teamEmail });
+            }
+
+            // Email to customer (confirmation)
+            if (customerEmail) {
+              const isInstallment = installmentCount > 1;
+              const customerEmailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #16a34a; margin-bottom: 24px;">✓ Zahlungsbestätigung</h2>
+                  
+                  <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                    Sehr geehrte/r ${customerName || 'Kunde/Kundin'},
+                  </p>
+                  
+                  <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                    vielen Dank für Ihre Zahlung! Wir haben ${isInstallment ? 'Ihre erste Rate' : 'Ihre Zahlung'} in Höhe von <strong>${formattedFee} €</strong> erfolgreich erhalten.
+                  </p>
+
+                  ${isInstallment ? `
+                  <div style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                    <p style="margin: 0; color: #92400e; font-size: 14px;">
+                      <strong>Hinweis zur Ratenzahlung:</strong> Sie haben eine Ratenzahlung über ${installmentCount} Monate gewählt. 
+                      Die weiteren Raten werden automatisch monatlich von Ihrem Konto abgebucht.
+                    </p>
+                  </div>
+                  ` : ''}
+                  
+                  <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0;">
+                    <h3 style="margin: 0 0 16px 0; color: #374151;">Wie geht es weiter?</h3>
+                    <p style="margin: 0; color: #4b5563; line-height: 1.6;">
+                      Wir werden nun Ihre Unterlagen prüfen und Ihre Steuererklärung beim Finanzamt einreichen. 
+                      Sie erhalten von uns eine Benachrichtigung, sobald es Neuigkeiten gibt.
+                    </p>
+                  </div>
+                  
+                  <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">
+                    Bei Fragen stehen wir Ihnen jederzeit zur Verfügung.
+                  </p>
+                  
+                  <p style="font-size: 16px; color: #333; margin-top: 24px;">
+                    Mit freundlichen Grüßen,<br>
+                    <strong>Ihr Clairmont Advisory Team</strong>
+                  </p>
+                  
+                  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+                  
+                  <p style="font-size: 12px; color: #9ca3af;">
+                    Diese E-Mail wurde automatisch von Clairmont Advisory gesendet.
+                  </p>
+                </div>
+              `;
+
+              const { error: customerEmailError } = await resend.emails.send({
+                from: "Clairmont Advisory <noreply@tax.clairmont-advisory.com>",
+                to: [customerEmail],
+                subject: `Zahlungsbestätigung - Clairmont Advisory`,
+                html: customerEmailHtml,
+              });
+
+              if (customerEmailError) {
+                logStep("Error sending customer confirmation email", { error: customerEmailError });
+              } else {
+                logStep("Customer confirmation email sent successfully", { to: customerEmail });
+              }
+            } else {
+              logStep("No customer email found, skipping customer confirmation");
             }
           } catch (emailErr) {
             const errorMessage = emailErr instanceof Error ? emailErr.message : String(emailErr);
@@ -235,6 +310,7 @@ serve(async (req) => {
       });
 
       const folderId = invoice.subscription_details?.metadata?.folder_id;
+      const customerName = invoice.subscription_details?.metadata?.customer_name;
       
       if (folderId) {
         const supabaseClient = createClient(
@@ -242,6 +318,13 @@ serve(async (req) => {
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
           { auth: { persistSession: false } }
         );
+
+        // Get customer email from folder
+        const { data: folderData } = await supabaseClient
+          .from("folders")
+          .select("customer_email")
+          .eq("id", folderId)
+          .maybeSingle();
 
         const { error: updateError } = await supabaseClient
           .from("folders")
@@ -252,6 +335,73 @@ serve(async (req) => {
           logStep("Error updating folder to rueckstand", { error: updateError.message });
         } else {
           logStep("Folder updated to rueckstand", { folderId });
+        }
+
+        // Send payment failed reminder to customer
+        const resendApiKey = Deno.env.get("RESEND_API_KEY");
+        const customerEmail = folderData?.customer_email;
+        
+        if (resendApiKey && customerEmail) {
+          try {
+            const resend = new Resend(resendApiKey);
+            
+            const amountDue = invoice.amount_due ? (invoice.amount_due / 100).toFixed(2).replace('.', ',') : 'N/A';
+            
+            const reminderEmailHtml = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #dc2626; margin-bottom: 24px;">⚠️ Zahlungserinnerung</h2>
+                
+                <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                  Sehr geehrte/r ${customerName || 'Kunde/Kundin'},
+                </p>
+                
+                <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                  leider konnte Ihre letzte Rate in Höhe von <strong>${amountDue} €</strong> nicht abgebucht werden.
+                </p>
+                
+                <div style="background-color: #fef2f2; border: 1px solid #dc2626; border-radius: 8px; padding: 20px; margin: 24px 0;">
+                  <h3 style="margin: 0 0 12px 0; color: #991b1b;">Was Sie tun können:</h3>
+                  <ul style="margin: 0; padding-left: 20px; color: #7f1d1d;">
+                    <li style="margin-bottom: 8px;">Überprüfen Sie, ob Ihre Zahlungsmethode noch gültig ist</li>
+                    <li style="margin-bottom: 8px;">Stellen Sie sicher, dass ausreichend Deckung vorhanden ist</li>
+                    <li>Kontaktieren Sie uns bei Fragen</li>
+                  </ul>
+                </div>
+                
+                <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                  Stripe wird automatisch versuchen, die Zahlung erneut abzubuchen. 
+                  Bitte stellen Sie sicher, dass Ihre Zahlungsmethode aktuell ist.
+                </p>
+                
+                <p style="font-size: 16px; color: #333; margin-top: 24px;">
+                  Mit freundlichen Grüßen,<br>
+                  <strong>Ihr Clairmont Advisory Team</strong>
+                </p>
+                
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+                
+                <p style="font-size: 12px; color: #9ca3af;">
+                  Diese E-Mail wurde automatisch von Clairmont Advisory gesendet.
+                </p>
+              </div>
+            `;
+
+            const { error: emailError } = await resend.emails.send({
+              from: "Clairmont Advisory <noreply@tax.clairmont-advisory.com>",
+              to: [customerEmail],
+              subject: `⚠️ Zahlungserinnerung - Clairmont Advisory`,
+              html: reminderEmailHtml,
+            });
+
+            if (emailError) {
+              logStep("Error sending payment failed reminder", { error: emailError });
+            } else {
+              logStep("Payment failed reminder sent to customer", { to: customerEmail });
+            }
+          } catch (emailErr) {
+            const errorMessage = emailErr instanceof Error ? emailErr.message : String(emailErr);
+            logStep("Error sending payment failed email", { error: errorMessage });
+          }
         }
       }
     }
