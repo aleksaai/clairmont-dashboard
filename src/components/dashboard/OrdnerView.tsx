@@ -327,6 +327,8 @@ export function OrdnerView() {
           customerName: selectedFolder.customer_name,
           customerEmail: selectedFolder.customer_email,
           prognoseAmount: selectedFolder.prognose_amount,
+          installmentCount: (selectedFolder as any).installment_count || 1,
+          installmentFee: (selectedFolder as any).installment_fee || 0,
         },
       });
 
@@ -344,9 +346,12 @@ export function OrdnerView() {
       setIsOfferMode(true);
       setIsEmailOpen(true);
       
+      const installmentInfo = data.installmentCount > 1 
+        ? ` (${data.installmentCount} Raten)` 
+        : '';
       toast({
         title: 'Zahlungslink erstellt',
-        description: `Gebühr: ${data.feeAmount.toFixed(2)} € (30% von ${data.prognoseAmount.toFixed(2)} €)`,
+        description: `Gesamtgebühr: ${data.totalFee.toFixed(2)} €${installmentInfo}`,
       });
       
       fetchFolders();

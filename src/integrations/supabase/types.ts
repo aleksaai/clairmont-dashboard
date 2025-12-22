@@ -70,6 +70,8 @@ export type Database = {
           customer_email: string | null
           customer_name: string
           id: string
+          installment_count: number | null
+          installment_fee: number | null
           name: string
           partner_code: string | null
           payment_link_url: string | null
@@ -87,6 +89,8 @@ export type Database = {
           customer_email?: string | null
           customer_name: string
           id?: string
+          installment_count?: number | null
+          installment_fee?: number | null
           name: string
           partner_code?: string | null
           payment_link_url?: string | null
@@ -104,6 +108,8 @@ export type Database = {
           customer_email?: string | null
           customer_name?: string
           id?: string
+          installment_count?: number | null
+          installment_fee?: number | null
           name?: string
           partner_code?: string | null
           payment_link_url?: string | null
