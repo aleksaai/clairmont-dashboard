@@ -13,6 +13,8 @@ interface EmailRequest {
   subject: string;
   message: string;
   customerName: string;
+  paymentLinkUrl?: string;
+  feeAmount?: number;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -22,9 +24,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { to, subject, message, customerName }: EmailRequest = await req.json();
+    const { to, subject, message, customerName, paymentLinkUrl, feeAmount }: EmailRequest = await req.json();
 
     console.log(`Sending email to: ${to}, subject: ${subject}`);
+    console.log(`Payment link included: ${!!paymentLinkUrl}`);
 
     if (!to || !subject || !message) {
       console.error("Missing required fields");
@@ -34,11 +37,35 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Build CTA button HTML if payment link is provided
+    let ctaButtonHtml = "";
+    if (paymentLinkUrl) {
+      const formattedFee = feeAmount ? feeAmount.toFixed(2).replace('.', ',') : null;
+      ctaButtonHtml = `
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${paymentLinkUrl}" 
+             target="_blank"
+             style="display: inline-block; 
+                    background-color: #2563eb; 
+                    color: #ffffff; 
+                    text-decoration: none; 
+                    padding: 16px 32px; 
+                    border-radius: 8px; 
+                    font-size: 16px; 
+                    font-weight: 600;
+                    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.25);">
+            ${formattedFee ? `Jetzt ${formattedFee} € bezahlen` : 'Jetzt bezahlen'}
+          </a>
+        </div>
+      `;
+    }
+
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="color: #333; line-height: 1.8; white-space: pre-wrap; font-size: 15px;">
 ${message}
         </div>
+        ${ctaButtonHtml}
       </div>
     `;
 
