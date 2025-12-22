@@ -47,10 +47,11 @@ export function EmailDialog({
 
   // Auto-generate offer email when in offer mode
   const handleGenerateOfferEmail = async () => {
-    if (!prognoseAmount || !paymentLinkUrl) return;
+    if (!prognoseAmount) return;
     
     const feeAmount = prognoseAmount * 0.30;
-    const offerPrompt = `Erstelle ein Angebot für den Kunden. Die Prognose für die Steuererstattung beträgt ${prognoseAmount.toFixed(2)} €. Die Beratungsgebühr beträgt ${feeAmount.toFixed(2)} € (30% der Erstattung). Füge einen Hinweis ein, dass der Kunde über den folgenden Link bezahlen kann: ${paymentLinkUrl}`;
+    // Do NOT include the payment link in the prompt - it will be added as a CTA button by send-email
+    const offerPrompt = `Erstelle ein Angebot für den Kunden. Die Prognose für die Steuererstattung beträgt ${prognoseAmount.toFixed(2)} €. Die Beratungsgebühr beträgt ${feeAmount.toFixed(2)} € (30% der Erstattung). Erwähne, dass der Kunde bequem über den Button in dieser E-Mail bezahlen kann. Füge KEINEN Link ein - der Zahlungs-Button wird automatisch hinzugefügt.`;
     
     setAiPrompt(offerPrompt);
     
@@ -63,10 +64,6 @@ export function EmailDialog({
           customerEmail: customerEmail || '',
           productType: productType || null,
           folderName: folderName || null,
-          isOffer: true,
-          prognoseAmount,
-          feeAmount,
-          paymentLinkUrl,
         },
       });
 
@@ -96,7 +93,7 @@ export function EmailDialog({
 
   // Auto-generate on open in offer mode
   useEffect(() => {
-    if (isOpen && isOfferMode && prognoseAmount && paymentLinkUrl && !message) {
+    if (isOpen && isOfferMode && prognoseAmount && !message) {
       handleGenerateOfferEmail();
     }
   }, [isOpen, isOfferMode]);
@@ -168,12 +165,17 @@ export function EmailDialog({
 
     setIsSending(true);
     try {
+      const feeAmount = prognoseAmount ? prognoseAmount * 0.30 : undefined;
+      
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           to: customerEmail,
           subject,
           message,
           customerName,
+          // Only include payment link for offer emails
+          paymentLinkUrl: isOfferMode ? paymentLinkUrl : undefined,
+          feeAmount: isOfferMode ? feeAmount : undefined,
         },
       });
 
