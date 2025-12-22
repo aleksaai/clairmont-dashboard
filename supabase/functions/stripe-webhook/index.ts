@@ -132,12 +132,22 @@ serve(async (req) => {
         // Determine status: "anzahlung_erhalten" for installments, "bezahlt" for one-time
         const newStatus = installmentCount > 1 ? "anzahlung_erhalten" : "bezahlt";
 
-        // Update folder status
+        // Calculate next payment date for installments
+        let nextPaymentDate: string | null = null;
+        if (installmentCount > 1) {
+          const nextDate = new Date();
+          nextDate.setMonth(nextDate.getMonth() + 1);
+          nextPaymentDate = nextDate.toISOString();
+        }
+
+        // Update folder status with installment tracking
         const { error: updateError } = await supabaseClient
           .from("folders")
           .update({
             payment_status: "paid",
             status: newStatus,
+            installments_paid: 1,
+            next_payment_date: nextPaymentDate,
           })
           .eq("id", folderId);
 
@@ -146,7 +156,7 @@ serve(async (req) => {
           throw new Error(`Failed to update folder: ${updateError.message}`);
         }
 
-        logStep("Folder updated successfully", { folderId, newStatus });
+        logStep("Folder updated successfully", { folderId, newStatus, installmentsPaid: 1, nextPaymentDate });
 
         // Get customer email from folder
         const { data: folderData } = await supabaseClient
@@ -297,6 +307,69 @@ serve(async (req) => {
         }
       } else {
         logStep("Payment not yet paid", { paymentStatus: session.payment_status });
+      }
+    }
+
+    // Handle invoice.paid - recurring payment successful (for installments after the first)
+    if (event.type === "invoice.paid") {
+      const invoice = event.data.object as Stripe.Invoice;
+      
+      // Only process subscription invoices that are not the first one
+      if (invoice.billing_reason === "subscription_cycle" && invoice.subscription) {
+        logStep("Subscription invoice paid", { 
+          invoiceId: invoice.id, 
+          subscriptionId: invoice.subscription,
+          billingReason: invoice.billing_reason,
+          metadata: invoice.subscription_details?.metadata 
+        });
+
+        const folderId = invoice.subscription_details?.metadata?.folder_id;
+        const installmentCount = parseInt(invoice.subscription_details?.metadata?.installment_count || "1", 10);
+        
+        if (folderId && installmentCount > 1) {
+          const supabaseClient = createClient(
+            Deno.env.get("SUPABASE_URL") ?? "",
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+            { auth: { persistSession: false } }
+          );
+
+          // Get current installments_paid
+          const { data: folderData } = await supabaseClient
+            .from("folders")
+            .select("installments_paid")
+            .eq("id", folderId)
+            .maybeSingle();
+
+          const currentPaid = folderData?.installments_paid || 1;
+          const newPaid = currentPaid + 1;
+
+          // Calculate next payment date
+          const nextDate = new Date();
+          nextDate.setMonth(nextDate.getMonth() + 1);
+
+          // Check if this is the last installment
+          const isLastInstallment = newPaid >= installmentCount;
+
+          const { error: updateError } = await supabaseClient
+            .from("folders")
+            .update({
+              installments_paid: newPaid,
+              next_payment_date: isLastInstallment ? null : nextDate.toISOString(),
+              status: isLastInstallment ? "bezahlt" : "anzahlung_erhalten",
+            })
+            .eq("id", folderId);
+
+          if (updateError) {
+            logStep("Error updating installment count", { error: updateError.message });
+          } else {
+            logStep("Installment count updated", { 
+              folderId, 
+              installmentsPaid: newPaid, 
+              totalInstallments: installmentCount,
+              isLastInstallment 
+            });
+          }
+        }
       }
     }
 

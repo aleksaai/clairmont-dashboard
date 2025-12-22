@@ -72,7 +72,9 @@ export type Database = {
           id: string
           installment_count: number | null
           installment_fee: number | null
+          installments_paid: number | null
           name: string
+          next_payment_date: string | null
           partner_code: string | null
           payment_link_url: string | null
           payment_status: string | null
@@ -91,7 +93,9 @@ export type Database = {
           id?: string
           installment_count?: number | null
           installment_fee?: number | null
+          installments_paid?: number | null
           name: string
+          next_payment_date?: string | null
           partner_code?: string | null
           payment_link_url?: string | null
           payment_status?: string | null
@@ -110,7 +114,9 @@ export type Database = {
           id?: string
           installment_count?: number | null
           installment_fee?: number | null
+          installments_paid?: number | null
           name?: string
+          next_payment_date?: string | null
           partner_code?: string | null
           payment_link_url?: string | null
           payment_status?: string | null
