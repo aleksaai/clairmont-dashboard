@@ -8,11 +8,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Mail, Wand2, Loader2, Send } from 'lucide-react';
+import { Mail, Wand2, Loader2, Send, Copy, ExternalLink } from 'lucide-react';
 
 interface EmailDialogProps {
   isOpen: boolean;
