@@ -533,55 +533,27 @@ export function OrdnerView() {
 
         {/* Customer Info */}
         <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="font-semibold text-foreground">{selectedFolder.customer_name}</h3>
-              {selectedFolder.customer_email && (
-                <p className="text-sm text-muted-foreground">{selectedFolder.customer_email}</p>
-              )}
-              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                <span>Erstellt: {new Date(selectedFolder.created_at).toLocaleDateString('de-DE')}</span>
-                <span className="text-muted-foreground/50">|</span>
-                <span>Partnercode: {selectedFolder.partner_code || '—'}</span>
-              </div>
-            </div>
-            
-            {/* Prognose Display - only for Steuern */}
+          <h3 className="font-semibold text-foreground">{selectedFolder.customer_name}</h3>
+          {selectedFolder.customer_email && (
+            <p className="text-sm text-muted-foreground">{selectedFolder.customer_email}</p>
+          )}
+          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+            <span>Erstellt: {new Date(selectedFolder.created_at).toLocaleDateString('de-DE')}</span>
+            <span className="text-muted-foreground/50">|</span>
+            <span>Partnercode: {selectedFolder.partner_code || '—'}</span>
             {selectedFolder.product === 'steuern' && selectedFolder.prognose_amount && (
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-right min-w-[200px]">
-                <div className="flex items-center justify-end gap-2 mb-1">
-                  <Euro className="w-4 h-4 text-primary" />
-                  <span className="text-xs text-muted-foreground">Prognose</span>
-                </div>
-                <p className="text-lg font-bold text-foreground">
-                  {selectedFolder.prognose_amount.toFixed(2)} €
-                </p>
-                <p className="text-sm text-primary font-medium">
-                  Gebühr: {(selectedFolder.prognose_amount * 0.30).toFixed(2)} €
-                </p>
-                {selectedFolder.payment_status && (
-                  <div className="flex items-center justify-end gap-1 mt-2 text-xs">
-                    {selectedFolder.payment_status === 'paid' && (
-                      <>
-                        <CheckCircle className="w-3 h-3 text-green-500" />
-                        <span className="text-green-500">Bezahlt</span>
-                      </>
-                    )}
-                    {selectedFolder.payment_status === 'pending' && (
-                      <>
-                        <Clock className="w-3 h-3 text-yellow-500" />
-                        <span className="text-yellow-500">Ausstehend</span>
-                      </>
-                    )}
-                    {selectedFolder.payment_status === 'failed' && (
-                      <>
-                        <XCircle className="w-3 h-3 text-destructive" />
-                        <span className="text-destructive">Fehlgeschlagen</span>
-                      </>
-                    )}
-                  </div>
+              <>
+                <span className="text-muted-foreground/50">|</span>
+                <span>Prognose: {selectedFolder.prognose_amount.toFixed(2)} €</span>
+                <span className="text-muted-foreground/50">|</span>
+                <span className="text-primary">Gebühr: {(selectedFolder.prognose_amount * 0.30).toFixed(2)} €</span>
+                {selectedFolder.payment_status === 'pending' && (
+                  <span className="text-yellow-500">(Ausstehend)</span>
                 )}
-              </div>
+                {selectedFolder.payment_status === 'paid' && (
+                  <span className="text-green-500">(Bezahlt)</span>
+                )}
+              </>
             )}
           </div>
         </div>
