@@ -51,7 +51,7 @@ interface Document {
 
 // Status options per product
 const productStatuses: Record<ProductType, CaseStatus[]> = {
-  steuern: ['anfrage_eingegangen', 'prognose_erstellt', 'angebot_gesendet', 'anzahlung_erhalten', 'in_bearbeitung', 'abgeschlossen', 'einspruch_nacharbeit'],
+  steuern: ['anfrage_eingegangen', 'prognose_erstellt', 'angebot_gesendet', 'bezahlt', 'anzahlung_erhalten', 'in_bearbeitung', 'abgeschlossen', 'einspruch_nacharbeit'],
   kredit: ['neu', 'bezahlt', 'in_bearbeitung', 'abgeschlossen', 'einspruch'],
   versicherung: ['neu', 'bezahlt', 'in_bearbeitung', 'abgeschlossen', 'einspruch'],
 };
@@ -578,7 +578,7 @@ export function OrdnerView() {
                 <span className="text-muted-foreground/50">|</span>
                 <span>Prognose: {selectedFolder.prognose_amount.toFixed(2)} €</span>
                 <span className="text-muted-foreground/50">|</span>
-                <span className="text-primary">Gebühr: {(selectedFolder.prognose_amount * 0.30).toFixed(2)} €</span>
+                <span className="text-yellow-500 font-medium">Gebühr: {(selectedFolder.prognose_amount * 0.30).toFixed(2)} €</span>
                 {selectedFolder.payment_status === 'pending' && (
                   <span className="text-muted-foreground">(Ausstehend)</span>
                 )}
