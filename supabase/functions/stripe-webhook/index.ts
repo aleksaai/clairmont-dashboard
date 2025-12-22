@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,7 @@ serve(async (req) => {
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
     
     if (!stripeKey) {
       throw new Error("STRIPE_SECRET_KEY is not set");
@@ -111,6 +113,103 @@ serve(async (req) => {
         }
 
         logStep("Folder updated successfully", { folderId, newStatus: "bezahlt" });
+
+        // Send email notification to assigned user
+        if (resendApiKey) {
+          try {
+            // Get folder details including assigned user
+            const { data: folder, error: folderError } = await supabaseClient
+              .from("folders")
+              .select("*, assigned_to, created_by")
+              .eq("id", folderId)
+              .single();
+
+            if (folderError) {
+              logStep("Error fetching folder details", { error: folderError.message });
+            } else {
+              // Get the email of the assigned user or creator
+              const userId = folder.assigned_to || folder.created_by;
+              
+              if (userId) {
+                const { data: profile, error: profileError } = await supabaseClient
+                  .from("profiles")
+                  .select("email, full_name")
+                  .eq("id", userId)
+                  .single();
+
+                if (profileError) {
+                  logStep("Error fetching profile", { error: profileError.message });
+                } else if (profile?.email) {
+                  const resend = new Resend(resendApiKey);
+                  
+                  const formattedFee = feeAmount ? parseFloat(feeAmount).toFixed(2).replace('.', ',') : 'N/A';
+                  const formattedPrognose = prognoseAmount ? parseFloat(prognoseAmount).toFixed(2).replace('.', ',') : 'N/A';
+                  
+                  const emailHtml = `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                      <h2 style="color: #16a34a; margin-bottom: 24px;">✓ Zahlung eingegangen!</h2>
+                      
+                      <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                        Gute Nachrichten! Der Kunde <strong>${customerName || 'Unbekannt'}</strong> hat soeben die Zahlung abgeschlossen.
+                      </p>
+                      
+                      <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0;">
+                        <h3 style="margin: 0 0 16px 0; color: #374151;">Zahlungsdetails</h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280;">Kunde:</td>
+                            <td style="padding: 8px 0; color: #111827; font-weight: 600;">${customerName || 'Unbekannt'}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280;">Prognose:</td>
+                            <td style="padding: 8px 0; color: #111827; font-weight: 600;">${formattedPrognose} €</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280;">Gezahlte Gebühr (30%):</td>
+                            <td style="padding: 8px 0; color: #16a34a; font-weight: 600;">${formattedFee} €</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280;">Status:</td>
+                            <td style="padding: 8px 0; color: #16a34a; font-weight: 600;">Bezahlt ✓</td>
+                          </tr>
+                        </table>
+                      </div>
+                      
+                      <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">
+                        Der Fall wurde automatisch auf "Bezahlt" gesetzt und kann nun weiter bearbeitet werden.
+                      </p>
+                      
+                      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+                      
+                      <p style="font-size: 12px; color: #9ca3af;">
+                        Diese E-Mail wurde automatisch von Clairmont Advisory gesendet.
+                      </p>
+                    </div>
+                  `;
+
+                  const { error: emailError } = await resend.emails.send({
+                    from: "Clairmont Advisory <noreply@tax.clairmont-advisory.com>",
+                    to: [profile.email],
+                    subject: `✓ Zahlung eingegangen: ${customerName || 'Kunde'}`,
+                    html: emailHtml,
+                  });
+
+                  if (emailError) {
+                    logStep("Error sending notification email", { error: emailError });
+                  } else {
+                    logStep("Notification email sent successfully", { to: profile.email });
+                  }
+                }
+              }
+            }
+          } catch (emailErr) {
+            const errorMessage = emailErr instanceof Error ? emailErr.message : String(emailErr);
+            logStep("Error in email notification process", { error: errorMessage });
+            // Don't throw - email is not critical
+          }
+        } else {
+          logStep("RESEND_API_KEY not set, skipping email notification");
+        }
       } else {
         logStep("Payment not yet paid", { paymentStatus: session.payment_status });
       }
