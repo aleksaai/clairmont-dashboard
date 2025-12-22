@@ -66,15 +66,51 @@ serve(async (req) => {
       logStep("Checkout session completed", { 
         sessionId: session.id, 
         paymentStatus: session.payment_status,
+        mode: session.mode,
         metadata: session.metadata 
       });
 
-      // Only process if payment was successful
+      // Create Supabase client with service role for database updates
+      const supabaseClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        { auth: { persistSession: false } }
+      );
+
+      // Handle subscription mode - set cancel_at on the subscription
+      if (session.mode === "subscription" && session.subscription) {
+        const installmentCount = parseInt(session.metadata?.installment_count || "1", 10);
+        
+        if (installmentCount > 1) {
+          // Calculate cancel_at: subscription ends after X months (installments)
+          const cancelAtDate = new Date();
+          cancelAtDate.setMonth(cancelAtDate.getMonth() + installmentCount);
+          const cancelAtTimestamp = Math.floor(cancelAtDate.getTime() / 1000);
+          
+          logStep("Setting subscription cancel_at", { 
+            subscriptionId: session.subscription, 
+            installmentCount, 
+            cancelAtDate: cancelAtDate.toISOString() 
+          });
+
+          try {
+            await stripe.subscriptions.update(session.subscription as string, {
+              cancel_at: cancelAtTimestamp,
+            });
+            logStep("Subscription cancel_at set successfully");
+          } catch (subError) {
+            const subErrorMessage = subError instanceof Error ? subError.message : String(subError);
+            logStep("Error setting subscription cancel_at", { error: subErrorMessage });
+          }
+        }
+      }
+
+      // Only process payment updates if payment was successful
       if (session.payment_status === "paid") {
         const folderId = session.metadata?.folder_id;
         const customerName = session.metadata?.customer_name;
         const prognoseAmount = session.metadata?.prognose_amount;
-        const feeAmount = session.metadata?.fee_amount;
+        const feeAmount = session.metadata?.fee_amount || session.metadata?.total_fee;
 
         if (!folderId) {
           logStep("No folder_id in metadata, skipping");
@@ -90,13 +126,6 @@ serve(async (req) => {
           prognoseAmount, 
           feeAmount 
         });
-
-        // Create Supabase client with service role for database updates
-        const supabaseClient = createClient(
-          Deno.env.get("SUPABASE_URL") ?? "",
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-          { auth: { persistSession: false } }
-        );
 
         // Update folder status to "bezahlt"
         const { error: updateError } = await supabaseClient
