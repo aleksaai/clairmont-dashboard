@@ -107,6 +107,13 @@ serve(async (req) => {
 
       logStep("Created product and price", { productId: product.id, priceId: price.id });
 
+      // Calculate cancel_at: subscription ends after X months (installments)
+      const cancelAtDate = new Date();
+      cancelAtDate.setMonth(cancelAtDate.getMonth() + installmentCount);
+      const cancelAtTimestamp = Math.floor(cancelAtDate.getTime() / 1000);
+      
+      logStep("Subscription will auto-cancel at", { cancelAtDate: cancelAtDate.toISOString(), installmentCount });
+
       // Create checkout session for subscription
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
@@ -121,13 +128,13 @@ serve(async (req) => {
         success_url: clairmontWebsite,
         cancel_url: clairmontWebsite,
         subscription_data: {
+          cancel_at: cancelAtTimestamp,
           metadata: {
             folder_id: folderId,
             customer_name: customerName,
             prognose_amount: prognoseAmount.toString(),
             total_fee: totalFee.toString(),
             installment_count: installmentCount.toString(),
-            remaining_installments: installmentCount.toString(),
           },
         },
         metadata: {
