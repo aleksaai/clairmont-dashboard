@@ -42,6 +42,8 @@ interface FolderData {
   payment_status: string | null;
   installment_count: number | null;
   installment_fee: number | null;
+  installments_paid: number | null;
+  next_payment_date: string | null;
 }
 
 interface Document {
@@ -580,7 +582,7 @@ export function OrdnerView() {
           {selectedFolder.customer_email && (
             <p className="text-sm text-muted-foreground">{selectedFolder.customer_email}</p>
           )}
-          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-muted-foreground">
             <span>Erstellt: {new Date(selectedFolder.created_at).toLocaleDateString('de-DE')}</span>
             <span className="text-muted-foreground/50">|</span>
             <span>Partnercode: {selectedFolder.partner_code || '—'}</span>
@@ -598,6 +600,23 @@ export function OrdnerView() {
                 )}
                 {selectedFolder.payment_status === 'failed' && (
                   <span className="text-destructive">(Fehlgeschlagen)</span>
+                )}
+              </>
+            )}
+            {/* Installment payment info */}
+            {selectedFolder.status === 'anzahlung_erhalten' && selectedFolder.installment_count && selectedFolder.installment_count > 1 && (
+              <>
+                <span className="text-muted-foreground/50">|</span>
+                <span className="text-amber-500 font-medium">
+                  Ratenzahlung: {selectedFolder.installments_paid || 1} von {selectedFolder.installment_count} bezahlt
+                </span>
+                {selectedFolder.next_payment_date && (
+                  <>
+                    <span className="text-muted-foreground/50">|</span>
+                    <span className="text-amber-500">
+                      Nächste Rate: {new Date(selectedFolder.next_payment_date).toLocaleDateString('de-DE')}
+                    </span>
+                  </>
                 )}
               </>
             )}
@@ -748,13 +767,25 @@ export function OrdnerView() {
                 onClick={() => setSelectedFolder(folder)}
                 className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4 cursor-pointer hover:bg-card/60 transition-all"
               >
-                <div className="aspect-square bg-primary/20 rounded-lg mb-3 flex items-center justify-center">
+                <div className="aspect-square bg-primary/20 rounded-lg mb-3 flex items-center justify-center relative">
                   <Folder className="w-12 h-12 text-primary" />
+                  {/* Installment badge for anzahlung_erhalten status */}
+                  {folder.status === 'anzahlung_erhalten' && folder.installment_count && folder.installment_count > 1 && (
+                    <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      {folder.installments_paid || 1}/{folder.installment_count}
+                    </div>
+                  )}
                 </div>
                 <p className="text-sm font-medium text-foreground truncate">{folder.customer_name}</p>
                 <p className="text-xs text-muted-foreground">
                   {new Date(folder.created_at).toLocaleDateString('de-DE')}
                 </p>
+                {/* Next payment info for installment customers */}
+                {folder.status === 'anzahlung_erhalten' && folder.next_payment_date && (
+                  <p className="text-xs text-amber-500 mt-1">
+                    Nächste Rate: {new Date(folder.next_payment_date).toLocaleDateString('de-DE')}
+                  </p>
+                )}
               </div>
             ))}
           </div>
