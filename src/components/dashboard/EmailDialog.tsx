@@ -52,8 +52,8 @@ export function EmailDialog({
     if (!prognoseAmount) return;
     
     const feeAmount = prognoseAmount * 0.30;
-    // Do NOT include the payment link in the prompt - it will be added as a CTA button by send-email
-    const offerPrompt = `Erstelle ein Angebot für den Kunden. Die Prognose für die Steuererstattung beträgt ${prognoseAmount.toFixed(2)} €. Die Beratungsgebühr beträgt ${feeAmount.toFixed(2)} € (30% der Erstattung). Erwähne, dass der Kunde bequem über den Button in dieser E-Mail bezahlen kann. Füge KEINEN Link ein - der Zahlungs-Button wird automatisch hinzugefügt.`;
+    // Updated prompt to mention that customer can choose their payment method
+    const offerPrompt = `Erstelle ein Angebot für den Kunden. Die Prognose für die Steuererstattung beträgt ${prognoseAmount.toFixed(2)} €. Die Beratungsgebühr beträgt ${feeAmount.toFixed(2)} € (30% der Erstattung). Erwähne, dass der Kunde über den Button in dieser E-Mail seine bevorzugte Zahlungsart (Sofortzahlung oder Ratenzahlung) selbst auswählen kann. Füge KEINEN Link ein - der Button wird automatisch hinzugefügt.`;
     
     setAiPrompt(offerPrompt);
     
