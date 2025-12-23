@@ -23,6 +23,3 @@ verify_jwt = false
 
 [functions.payment-reminders]
 verify_jwt = false
-
-[functions.get-payment-options]
-verify_jwt = false

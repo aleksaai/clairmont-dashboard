@@ -77,7 +77,6 @@ export type Database = {
           next_payment_date: string | null
           partner_code: string | null
           payment_link_url: string | null
-          payment_selection_token: string | null
           payment_status: string | null
           product: Database["public"]["Enums"]["product_type"]
           prognose_amount: number | null
@@ -99,7 +98,6 @@ export type Database = {
           next_payment_date?: string | null
           partner_code?: string | null
           payment_link_url?: string | null
-          payment_selection_token?: string | null
           payment_status?: string | null
           product?: Database["public"]["Enums"]["product_type"]
           prognose_amount?: number | null
@@ -121,7 +119,6 @@ export type Database = {
           next_payment_date?: string | null
           partner_code?: string | null
           payment_link_url?: string | null
-          payment_selection_token?: string | null
           payment_status?: string | null
           product?: Database["public"]["Enums"]["product_type"]
           prognose_amount?: number | null

@@ -40,7 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Build CTA button HTML if payment link is provided
     let ctaButtonHtml = "";
     if (paymentLinkUrl) {
-      // Updated button text since customer now chooses their payment method
+      const formattedFee = feeAmount ? feeAmount.toFixed(2).replace('.', ',') : null;
       ctaButtonHtml = `
         <div style="text-align: center; margin: 32px 0;">
           <a href="${paymentLinkUrl}" 
@@ -54,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
                     font-size: 16px; 
                     font-weight: 600;
                     box-shadow: 0 4px 6px rgba(37, 99, 235, 0.25);">
-            Zahlungsart wählen
+            ${formattedFee ? `Jetzt ${formattedFee} € bezahlen` : 'Jetzt bezahlen'}
           </a>
         </div>
       `;

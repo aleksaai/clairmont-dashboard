@@ -329,37 +329,23 @@ export function OrdnerView() {
 
     setIsGeneratingPaymentLink(true);
     try {
-      // Fetch the folder's payment_selection_token
-      const { data: folderData, error: fetchError } = await supabase
-        .from('folders')
-        .select('payment_selection_token')
-        .eq('id', selectedFolder.id)
-        .single();
+      const { data, error } = await supabase.functions.invoke('create-payment-link', {
+        body: {
+          folderId: selectedFolder.id,
+          customerName: selectedFolder.customer_name,
+          customerEmail: selectedFolder.customer_email,
+          prognoseAmount: selectedFolder.prognose_amount,
+          installmentCount: selectedFolder.installment_count || 1,
+          installmentFee: selectedFolder.installment_fee || 0,
+        },
+      });
 
-      if (fetchError || !folderData?.payment_selection_token) {
-        throw new Error('Zahlungstoken konnte nicht geladen werden');
-      }
+      if (error) throw error;
 
-      // Generate the payment selection URL (customer chooses their payment method here)
-      const baseUrl = window.location.origin;
-      const paymentSelectionUrl = `${baseUrl}/zahlung/${folderData.payment_selection_token}`;
-
-      // Update folder with the payment selection URL and status
-      const { error: updateError } = await supabase
-        .from('folders')
-        .update({
-          payment_link_url: paymentSelectionUrl,
-          payment_status: 'pending',
-          status: 'angebot_gesendet',
-        })
-        .eq('id', selectedFolder.id);
-
-      if (updateError) throw updateError;
-
-      // Update local state
+      // Update local state with payment info
       setSelectedFolder({
         ...selectedFolder,
-        payment_link_url: paymentSelectionUrl,
+        payment_link_url: data.url,
         payment_status: 'pending',
         status: 'angebot_gesendet',
       });
@@ -368,18 +354,20 @@ export function OrdnerView() {
       setIsOfferMode(true);
       setIsEmailOpen(true);
       
-      const feeAmount = selectedFolder.prognose_amount * 0.30;
+      const installmentInfo = data.installmentCount > 1 
+        ? ` (${data.installmentCount} Raten)` 
+        : '';
       toast({
-        title: 'Angebot vorbereitet',
-        description: `Der Kunde kann seine Zahlungsart selbst wählen. Beratungsgebühr: ${feeAmount.toFixed(2)} €`,
+        title: 'Zahlungslink erstellt',
+        description: `Gesamtgebühr: ${data.totalFee.toFixed(2)} €${installmentInfo}`,
       });
       
       fetchFolders();
     } catch (error) {
-      console.error('Error preparing offer:', error);
+      console.error('Error creating payment link:', error);
       toast({
         title: 'Fehler',
-        description: 'Das Angebot konnte nicht vorbereitet werden.',
+        description: 'Der Zahlungslink konnte nicht erstellt werden.',
         variant: 'destructive',
       });
     } finally {
