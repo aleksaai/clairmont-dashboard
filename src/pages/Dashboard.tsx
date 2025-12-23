@@ -9,6 +9,7 @@ import { ChatsListe } from '@/components/dashboard/ChatsListe';
 import { TeamView } from '@/components/dashboard/TeamView';
 import { EinstellungenView } from '@/components/dashboard/EinstellungenView';
 import { KnowledgeBaseView } from '@/components/dashboard/KnowledgeBaseView';
+import { ProvisionsrechnerView } from '@/components/dashboard/ProvisionsrechnerView';
 
 export default function Dashboard() {
   const { user, role, profile, loading, signOut, refreshProfile } = useAuth();
@@ -54,6 +55,8 @@ export default function Dashboard() {
         return <TeamView />;
       case 'kb':
         return <KnowledgeBaseView />;
+      case 'provision':
+        return <ProvisionsrechnerView />;
       case 'einstellungen':
         return (
           <EinstellungenView 
