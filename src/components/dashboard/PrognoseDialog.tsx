@@ -30,24 +30,23 @@ interface PrognoseDialogProps {
   onPrognoseUpdated: (amount: number, installmentCount: number, installmentFee: number) => void;
 }
 
-type InstallmentOption = 'sofort' | '2' | '3' | '6' | '9' | 'individuell';
+type InstallmentOption = 'sofort' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'individuell';
 
-// Get available installment options based on amount (per Clairmont Advisory Zahlungsplan)
-const getAvailableInstallmentOptions = (amount: number): InstallmentOption[] => {
+// Get maximum installments based on amount (per Clairmont Advisory Zahlungsplan)
+const getMaxInstallments = (amount: number): number => {
   if (amount >= 4500) {
-    // Ab 4.500 €: Individuelle Beratung
-    return ['sofort', 'individuell'];
+    return 0; // Individuelle Beratung
   } else if (amount >= 3000) {
-    // 3.000 € – 4.500 €: Bis zu 9 Raten
-    return ['sofort', '2', '3', '6', '9'];
+    return 9; // Bis zu 9 Raten
   } else if (amount >= 1000) {
-    // 1.000 € – 3.000 €: Bis zu 6 Raten
-    return ['sofort', '2', '3', '6'];
+    return 6; // Bis zu 6 Raten
   } else {
-    // Bis 1.000 €: Nur Sofortzahlung oder 2 Raten
-    return ['sofort', '2'];
+    return 2; // Bis zu 2 Raten
   }
 };
+
+// Check if individual consultation is required
+const requiresIndividualConsultation = (amount: number): boolean => amount >= 4500;
 
 export function PrognoseDialog({ 
   isOpen, 
@@ -71,9 +70,9 @@ export function PrognoseDialog({
   const parsedAmount = parseFloat(amount.replace(',', '.')) || 0;
   const feeAmount = parsedAmount * 0.30;
   
-  // Get available options based on amount
-  const availableOptions = getAvailableInstallmentOptions(parsedAmount);
-  const isIndividualConsultation = installments === 'individuell';
+  // Get max installments and check if individual consultation is needed
+  const maxInstallments = getMaxInstallments(parsedAmount);
+  const isIndividualConsultation = requiresIndividualConsultation(parsedAmount);
   
   // Calculate installment fee: 10€ per month for installment payments
   const installmentCount = installments === 'sofort' || installments === 'individuell' ? 1 : parseInt(installments);
@@ -81,12 +80,21 @@ export function PrognoseDialog({
   const totalFee = feeAmount + installmentFee;
   const perInstallmentAmount = installments !== 'sofort' && installments !== 'individuell' ? totalFee / installmentCount : totalFee;
 
-  // Reset installment selection if current selection is no longer available
+  // Reset installment selection if current selection exceeds max
   useEffect(() => {
-    if (parsedAmount > 0 && !availableOptions.includes(installments)) {
-      setInstallments('sofort');
+    if (parsedAmount > 0) {
+      if (isIndividualConsultation && installments !== 'individuell') {
+        setInstallments('individuell');
+      } else if (!isIndividualConsultation && installments === 'individuell') {
+        setInstallments('sofort');
+      } else if (installments !== 'sofort' && installments !== 'individuell') {
+        const selectedCount = parseInt(installments);
+        if (selectedCount > maxInstallments) {
+          setInstallments('sofort');
+        }
+      }
     }
-  }, [parsedAmount, availableOptions, installments]);
+  }, [parsedAmount, maxInstallments, isIndividualConsultation, installments]);
 
   const handleSave = async () => {
     if (parsedAmount <= 0) {
@@ -169,27 +177,45 @@ export function PrognoseDialog({
           {/* Installment Selection */}
           <div className="space-y-2">
             <Label htmlFor="installments">Zahlungsart</Label>
-            <Select value={installments} onValueChange={(v) => setInstallments(v as InstallmentOption)}>
+            <Select 
+              value={installments} 
+              onValueChange={(v) => setInstallments(v as InstallmentOption)}
+              disabled={isIndividualConsultation}
+            >
               <SelectTrigger className="bg-input/50 border-border">
                 <SelectValue placeholder="Zahlungsart wählen" />
               </SelectTrigger>
               <SelectContent>
-                {availableOptions.includes('sofort') && (
-                  <SelectItem value="sofort">Sofortzahlung</SelectItem>
+                {!isIndividualConsultation && (
+                  <>
+                    <SelectItem value="sofort">Sofortzahlung</SelectItem>
+                    {maxInstallments >= 2 && (
+                      <SelectItem value="2">2 Raten (+20€ Aufschlag)</SelectItem>
+                    )}
+                    {maxInstallments >= 3 && (
+                      <SelectItem value="3">3 Raten (+30€ Aufschlag)</SelectItem>
+                    )}
+                    {maxInstallments >= 4 && (
+                      <SelectItem value="4">4 Raten (+40€ Aufschlag)</SelectItem>
+                    )}
+                    {maxInstallments >= 5 && (
+                      <SelectItem value="5">5 Raten (+50€ Aufschlag)</SelectItem>
+                    )}
+                    {maxInstallments >= 6 && (
+                      <SelectItem value="6">6 Raten (+60€ Aufschlag)</SelectItem>
+                    )}
+                    {maxInstallments >= 7 && (
+                      <SelectItem value="7">7 Raten (+70€ Aufschlag)</SelectItem>
+                    )}
+                    {maxInstallments >= 8 && (
+                      <SelectItem value="8">8 Raten (+80€ Aufschlag)</SelectItem>
+                    )}
+                    {maxInstallments >= 9 && (
+                      <SelectItem value="9">9 Raten (+90€ Aufschlag)</SelectItem>
+                    )}
+                  </>
                 )}
-                {availableOptions.includes('2') && (
-                  <SelectItem value="2">2 Raten (+20€ Aufschlag)</SelectItem>
-                )}
-                {availableOptions.includes('3') && (
-                  <SelectItem value="3">3 Raten (+30€ Aufschlag)</SelectItem>
-                )}
-                {availableOptions.includes('6') && (
-                  <SelectItem value="6">6 Raten (+60€ Aufschlag)</SelectItem>
-                )}
-                {availableOptions.includes('9') && (
-                  <SelectItem value="9">9 Raten (+90€ Aufschlag)</SelectItem>
-                )}
-                {availableOptions.includes('individuell') && (
+                {isIndividualConsultation && (
                   <SelectItem value="individuell">Individuelle Beratung erforderlich</SelectItem>
                 )}
               </SelectContent>
