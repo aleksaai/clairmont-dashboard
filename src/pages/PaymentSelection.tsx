@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, AlertCircle, CreditCard, Calendar } from "lucide-react";
@@ -45,12 +44,7 @@ const PaymentSelection = () => {
       }
 
       try {
-        const { data, error: fetchError } = await supabase.functions.invoke("get-payment-options", {
-          body: null,
-          headers: {},
-        });
-
-        // The function uses query params, so we need to call it differently
+        // Call the edge function with token as query parameter
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-payment-options?token=${token}`,
           {
