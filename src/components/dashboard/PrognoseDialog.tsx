@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Calculator, Loader2, Euro } from 'lucide-react';
+import { Calculator, Loader2, Euro, AlertTriangle } from 'lucide-react';
 
 interface PrognoseDialogProps {
   isOpen: boolean;
@@ -30,7 +30,24 @@ interface PrognoseDialogProps {
   onPrognoseUpdated: (amount: number, installmentCount: number, installmentFee: number) => void;
 }
 
-type InstallmentOption = 'sofort' | '2' | '3' | '6';
+type InstallmentOption = 'sofort' | '2' | '3' | '6' | '9' | 'individuell';
+
+// Get available installment options based on amount (per Clairmont Advisory Zahlungsplan)
+const getAvailableInstallmentOptions = (amount: number): InstallmentOption[] => {
+  if (amount >= 4500) {
+    // Ab 4.500 €: Individuelle Beratung
+    return ['sofort', 'individuell'];
+  } else if (amount >= 3000) {
+    // 3.000 € – 4.500 €: Bis zu 9 Raten
+    return ['sofort', '2', '3', '6', '9'];
+  } else if (amount >= 1000) {
+    // 1.000 € – 3.000 €: Bis zu 6 Raten
+    return ['sofort', '2', '3', '6'];
+  } else {
+    // Bis 1.000 €: Nur Sofortzahlung oder 2 Raten
+    return ['sofort', '2'];
+  }
+};
 
 export function PrognoseDialog({ 
   isOpen, 
@@ -45,6 +62,7 @@ export function PrognoseDialog({
   const [amount, setAmount] = useState(currentPrognose?.toString() || '');
   const getInitialInstallments = (): InstallmentOption => {
     if (!currentInstallments || currentInstallments === 1) return 'sofort';
+    if (currentInstallments === 9) return '9';
     return currentInstallments.toString() as InstallmentOption;
   };
   const [installments, setInstallments] = useState<InstallmentOption>(getInitialInstallments());
@@ -53,11 +71,22 @@ export function PrognoseDialog({
   const parsedAmount = parseFloat(amount.replace(',', '.')) || 0;
   const feeAmount = parsedAmount * 0.30;
   
+  // Get available options based on amount
+  const availableOptions = getAvailableInstallmentOptions(parsedAmount);
+  const isIndividualConsultation = installments === 'individuell';
+  
   // Calculate installment fee: 10€ per month for installment payments
-  const installmentCount = installments === 'sofort' ? 1 : parseInt(installments);
-  const installmentFee = installments !== 'sofort' ? installmentCount * 10 : 0;
+  const installmentCount = installments === 'sofort' || installments === 'individuell' ? 1 : parseInt(installments);
+  const installmentFee = installments !== 'sofort' && installments !== 'individuell' ? installmentCount * 10 : 0;
   const totalFee = feeAmount + installmentFee;
-  const perInstallmentAmount = installments !== 'sofort' ? totalFee / installmentCount : totalFee;
+  const perInstallmentAmount = installments !== 'sofort' && installments !== 'individuell' ? totalFee / installmentCount : totalFee;
+
+  // Reset installment selection if current selection is no longer available
+  useEffect(() => {
+    if (parsedAmount > 0 && !availableOptions.includes(installments)) {
+      setInstallments('sofort');
+    }
+  }, [parsedAmount, availableOptions, installments]);
 
   const handleSave = async () => {
     if (parsedAmount <= 0) {
@@ -145,16 +174,59 @@ export function PrognoseDialog({
                 <SelectValue placeholder="Zahlungsart wählen" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sofort">Sofortzahlung</SelectItem>
-                <SelectItem value="2">2 Raten (+20€ Aufschlag)</SelectItem>
-                <SelectItem value="3">3 Raten (+30€ Aufschlag)</SelectItem>
-                <SelectItem value="6">6 Raten (+60€ Aufschlag)</SelectItem>
+                {availableOptions.includes('sofort') && (
+                  <SelectItem value="sofort">Sofortzahlung</SelectItem>
+                )}
+                {availableOptions.includes('2') && (
+                  <SelectItem value="2">2 Raten (+20€ Aufschlag)</SelectItem>
+                )}
+                {availableOptions.includes('3') && (
+                  <SelectItem value="3">3 Raten (+30€ Aufschlag)</SelectItem>
+                )}
+                {availableOptions.includes('6') && (
+                  <SelectItem value="6">6 Raten (+60€ Aufschlag)</SelectItem>
+                )}
+                {availableOptions.includes('9') && (
+                  <SelectItem value="9">9 Raten (+90€ Aufschlag)</SelectItem>
+                )}
+                {availableOptions.includes('individuell') && (
+                  <SelectItem value="individuell">Individuelle Beratung erforderlich</SelectItem>
+                )}
               </SelectContent>
             </Select>
+            {parsedAmount > 0 && parsedAmount < 1000 && (
+              <p className="text-xs text-muted-foreground">
+                Bis 1.000 €: Sofortzahlung oder max. 2 Raten
+              </p>
+            )}
+            {parsedAmount >= 1000 && parsedAmount < 3000 && (
+              <p className="text-xs text-muted-foreground">
+                1.000 € – 3.000 €: Bis zu 6 Raten möglich
+              </p>
+            )}
+            {parsedAmount >= 3000 && parsedAmount < 4500 && (
+              <p className="text-xs text-muted-foreground">
+                3.000 € – 4.500 €: Bis zu 9 Raten möglich
+              </p>
+            )}
           </div>
 
+          {/* Warning for individual consultation */}
+          {isIndividualConsultation && (
+            <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-warning">Individuelle Beratung erforderlich</p>
+                <p className="text-muted-foreground mt-1">
+                  Bei Beträgen ab 4.500 € ist eine individuelle Zahlungsvereinbarung notwendig. 
+                  Bitte kontaktieren Sie den Kunden direkt.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Fee Calculation Display */}
-          {parsedAmount > 0 && (
+          {parsedAmount > 0 && !isIndividualConsultation && (
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Geschätzte Erstattung:</span>
@@ -189,12 +261,14 @@ export function PrognoseDialog({
             </div>
           )}
 
-          <p className="text-xs text-muted-foreground">
-            {installments === 'sofort' 
-              ? 'Die Gebühr wird dem Kunden als einmaliger Zahlungslink gesendet.'
-              : `Der Kunde erhält ${installmentCount} monatliche Zahlungsaufforderungen.`
-            }
-          </p>
+          {!isIndividualConsultation && (
+            <p className="text-xs text-muted-foreground">
+              {installments === 'sofort' 
+                ? 'Die Gebühr wird dem Kunden als einmaliger Zahlungslink gesendet.'
+                : `Der Kunde erhält ${installmentCount} monatliche Zahlungsaufforderungen.`
+              }
+            </p>
+          )}
         </div>
 
         <DialogFooter>
@@ -203,7 +277,7 @@ export function PrognoseDialog({
           </Button>
           <Button 
             onClick={handleSave} 
-            disabled={isSaving || parsedAmount <= 0}
+            disabled={isSaving || parsedAmount <= 0 || isIndividualConsultation}
           >
             {isSaving ? (
               <>
