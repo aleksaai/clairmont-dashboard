@@ -242,6 +242,39 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_provision_configs: {
+        Row: {
+          bookkeeper_fee: number
+          created_at: string
+          created_by: string | null
+          id: string
+          partner_code: string
+          provision_type: string
+          provision_value: number
+          updated_at: string
+        }
+        Insert: {
+          bookkeeper_fee?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          partner_code: string
+          provision_type: string
+          provision_value: number
+          updated_at?: string
+        }
+        Update: {
+          bookkeeper_fee?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          partner_code?: string
+          provision_type?: string
+          provision_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
