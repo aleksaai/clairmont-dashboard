@@ -59,12 +59,9 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
       <div className="hidden md:flex items-center gap-4 md:gap-8">
         <button 
           onClick={() => onSectionChange('ordner')} 
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          className="flex items-center hover:opacity-80 transition-opacity"
         >
-          <img src={logo} alt="Clairmont Advisory" className="h-7 w-auto" />
-          <span className="hidden md:inline text-lg font-semibold text-foreground tracking-tight">
-            Clairmont Advisory
-          </span>
+          <img src={logo} alt="Clairmont" className="h-7 w-auto" />
         </button>
         
         {/* Desktop Navigation */}
