@@ -321,7 +321,7 @@ export function ChatsListe() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-8rem)] rounded-xl overflow-hidden border border-border">
+    <div className="flex flex-col md:flex-row h-[calc(100dvh-8rem)] md:h-[calc(100vh-8rem)] rounded-xl overflow-hidden border border-border">
       {/* Left: User List - Full width on mobile when no user selected, hidden when user selected */}
       <div className={`${selectedUser ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-border bg-card/30 flex-col`}>
         {/* Search */}
@@ -390,7 +390,7 @@ export function ChatsListe() {
       </div>
 
       {/* Right: Chat Area - Full width on mobile */}
-      <div className={`${selectedUser ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-gradient-to-b from-primary/5 to-primary/10`}>
+      <div className={`${selectedUser ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-h-0 bg-gradient-to-b from-primary/5 to-primary/10`}>
         {selectedUser ? (
           <>
             {/* Chat Header */}
@@ -415,7 +415,7 @@ export function ChatsListe() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3">
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-3">
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-muted-foreground text-sm text-center px-4">
