@@ -68,7 +68,7 @@ export function MobileMenu({
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0 bg-card border-border">
+      <SheetContent side="right" className="w-72 p-0 bg-card border-border">
         {/* User Info */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3">
