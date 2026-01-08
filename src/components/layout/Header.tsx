@@ -55,21 +55,8 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
 
   return (
     <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-3 md:px-6">
-      {/* Mobile Menu */}
-      <MobileMenu
-        userName={userName}
-        userRole={userRole}
-        avatarUrl={avatarUrl}
-        activeSection={activeSection}
-        onSectionChange={onSectionChange}
-        onSignOut={onSignOut}
-        unreadMessageCount={unreadMessageCount}
-        isOpen={mobileMenuOpen}
-        onOpenChange={setMobileMenuOpen}
-      />
-
-      {/* Left: Logo + Navigation */}
-      <div className="flex items-center gap-4 md:gap-8">
+      {/* Left: Logo + Navigation (Desktop) / Empty space for centering (Mobile) */}
+      <div className="hidden md:flex items-center gap-4 md:gap-8">
         <div className="flex items-center gap-2">
           <img src={logo} alt="Clairmont Advisory" className="h-7 w-auto" />
           <span className="hidden md:inline text-lg font-semibold text-foreground tracking-tight">
@@ -103,6 +90,11 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
         </nav>
       </div>
 
+      {/* Mobile: Centered Logo */}
+      <div className="flex-1 flex justify-center md:hidden">
+        <img src={logo} alt="Clairmont Advisory" className="h-7 w-auto" />
+      </div>
+
       {/* Center: Search - Hidden on mobile */}
       <div className="hidden lg:flex flex-1 justify-center px-8">
         <input
@@ -112,8 +104,21 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
         />
       </div>
 
-      {/* Spacer for mobile */}
-      <div className="flex-1 lg:hidden" />
+      {/* Spacer for desktop without search */}
+      <div className="hidden md:flex lg:hidden flex-1" />
+
+      {/* Mobile: Burger Menu (right) */}
+      <MobileMenu
+        userName={userName}
+        userRole={userRole}
+        avatarUrl={avatarUrl}
+        activeSection={activeSection}
+        onSectionChange={onSectionChange}
+        onSignOut={onSignOut}
+        unreadMessageCount={unreadMessageCount}
+        isOpen={mobileMenuOpen}
+        onOpenChange={setMobileMenuOpen}
+      />
 
       {/* Right: User Info + Avatar with Dropdown - Hidden on mobile */}
       <div className="hidden md:flex items-center gap-3">
