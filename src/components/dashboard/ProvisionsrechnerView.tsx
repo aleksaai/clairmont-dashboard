@@ -353,7 +353,7 @@ export function ProvisionsrechnerView() {
                 <Euro className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Buchhalter</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Sachbearbeiter</p>
                 <p className="text-lg md:text-2xl font-bold text-foreground">{totals.totalBookkeeper.toFixed(0)} €</p>
               </div>
             </div>
@@ -468,7 +468,7 @@ export function ProvisionsrechnerView() {
                     <th className="text-left py-2 px-3 font-medium text-muted-foreground">Code</th>
                     <th className="text-left py-2 px-3 font-medium text-muted-foreground">Typ</th>
                     <th className="text-left py-2 px-3 font-medium text-muted-foreground">Provision</th>
-                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">Buchhalter</th>
+                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">Sachbearbeiter</th>
                     {isAdmin && (
                       <th className="text-right py-2 px-3 font-medium text-muted-foreground">Aktionen</th>
                     )}
@@ -568,7 +568,7 @@ export function ProvisionsrechnerView() {
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Buchhaltergebühr (€)</label>
+              <label className="text-sm font-medium">Sachbearbeitergebühr (€)</label>
               <Input
                 type="number"
                 value={formData.bookkeeper_fee}
