@@ -50,6 +50,15 @@ export function ChatsListe() {
       if (!user) return;
 
       try {
+        // First get current user's role
+        const { data: currentRoleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+        
+        const currentRole = currentRoleData?.role;
+
         const { data: profiles, error } = await supabase
           .from('profiles')
           .select('id, full_name, avatar_url, email')
@@ -57,9 +66,27 @@ export function ChatsListe() {
 
         if (error) throw error;
 
+        // Get roles for all profiles
+        const { data: allRoles } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+
+        // Filter profiles based on visibility rules
+        // Vertriebler can only see admins and sachbearbeiter
+        // Admins and Sachbearbeiter can see everyone
+        const filteredProfiles = (profiles || []).filter(profile => {
+          const profileRole = allRoles?.find(r => r.user_id === profile.id)?.role;
+          
+          if (currentRole === 'vertriebler') {
+            return profileRole === 'admin' || profileRole === 'sachbearbeiter';
+          }
+          
+          return true;
+        });
+
         // Get last messages and unread counts for each user
         const usersWithMessages = await Promise.all(
-          (profiles || []).map(async (profile) => {
+          filteredProfiles.map(async (profile) => {
             const { data: lastMsg } = await supabase
               .from('messages')
               .select('content, created_at')
