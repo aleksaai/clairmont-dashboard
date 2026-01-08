@@ -321,9 +321,9 @@ export function ChatsListe() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] rounded-xl overflow-hidden border border-border">
-      {/* Left: User List */}
-      <div className="w-80 border-r border-border bg-card/30 flex flex-col">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-8rem)] rounded-xl overflow-hidden border border-border">
+      {/* Left: User List - Full width on mobile when no user selected, hidden when user selected */}
+      <div className={`${selectedUser ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-border bg-card/30 flex-col`}>
         {/* Search */}
         <div className="p-3 border-b border-border">
           <input
@@ -389,12 +389,19 @@ export function ChatsListe() {
         </div>
       </div>
 
-      {/* Right: Chat Area */}
-      <div className="flex-1 flex flex-col bg-gradient-to-b from-primary/5 to-primary/10">
+      {/* Right: Chat Area - Full width on mobile */}
+      <div className={`${selectedUser ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-gradient-to-b from-primary/5 to-primary/10`}>
         {selectedUser ? (
           <>
             {/* Chat Header */}
-            <div className="h-14 px-4 border-b border-border bg-card/50 backdrop-blur-sm flex items-center gap-3">
+            <div className="h-14 px-3 md:px-4 border-b border-border bg-card/50 backdrop-blur-sm flex items-center gap-3">
+              {/* Back button on mobile */}
+              <button 
+                onClick={() => setSelectedUser(null)}
+                className="md:hidden p-1.5 -ml-1 rounded-lg hover:bg-muted/50"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
               <UserAvatar
                 avatarUrl={selectedUser.avatar_url}
                 fullName={selectedUser.full_name}
@@ -408,10 +415,10 @@ export function ChatsListe() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3">
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-muted-foreground text-sm text-center px-4">
                     Noch keine Nachrichten. Schreiben Sie die erste!
                   </p>
                 </div>
@@ -423,7 +430,7 @@ export function ChatsListe() {
                       className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[70%] px-3 py-2 rounded-xl ${
+                        className={`max-w-[85%] md:max-w-[70%] px-3 py-2 rounded-xl ${
                           message.sender_id === user?.id
                             ? 'bg-primary text-primary-foreground rounded-br-sm'
                             : 'bg-card/80 text-foreground rounded-bl-sm'
@@ -459,7 +466,7 @@ export function ChatsListe() {
             </div>
 
             {/* Message Input */}
-            <div className="p-3 border-t border-border bg-card/50 backdrop-blur-sm">
+            <div className="p-2 md:p-3 border-t border-border bg-card/50 backdrop-blur-sm">
               {selectedFile && (
                 <div className="mb-2 p-2 bg-muted/50 rounded-lg flex items-center gap-2">
                   {selectedFile.type.startsWith('image/') ? (
@@ -496,22 +503,23 @@ export function ChatsListe() {
                   size="icon"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
+                  className="shrink-0"
                 >
                   <Paperclip className="w-4 h-4" />
                 </Button>
                 <input
                   type="text"
-                  placeholder="Nachricht schreiben..."
+                  placeholder="Nachricht..."
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                  className="flex-1 bg-input/50 border border-border rounded-lg px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="flex-1 min-w-0 bg-input/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                   disabled={uploading}
                 />
                 <Button
                   onClick={handleSendMessage}
                   size="icon"
-                  className="bg-primary text-primary-foreground"
+                  className="bg-primary text-primary-foreground shrink-0"
                   disabled={(!messageInput.trim() && !selectedFile) || uploading}
                 >
                   <Send className="w-4 h-4" />

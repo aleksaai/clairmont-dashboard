@@ -140,17 +140,17 @@ export function ProvisionsrechnerView() {
   const monthOptions = getMonthOptions();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Calculator className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-semibold text-foreground">Provisionsübersicht</h1>
+          <Calculator className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+          <h1 className="text-xl md:text-2xl font-semibold text-foreground">Provisionsübersicht</h1>
         </div>
         
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -165,58 +165,58 @@ export function ProvisionsrechnerView() {
       </div>
 
       {/* Zusammenfassung */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Euro className="h-5 w-5 text-primary" />
+          <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-primary/10 rounded-lg">
+                <Euro className="h-4 w-4 md:h-5 md:w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Gesamtumsatz</p>
-                <p className="text-2xl font-bold text-foreground">{totals.totalAmount.toFixed(2)} €</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Umsatz</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">{totals.totalAmount.toFixed(0)} €</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Users className="h-5 w-5 text-primary" />
+          <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-primary/10 rounded-lg">
+                <Users className="h-4 w-4 md:h-5 md:w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Vertriebler-Provisionen</p>
-                <p className="text-2xl font-bold text-foreground">{totals.totalProvisions.toFixed(2)} €</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Provisionen</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">{totals.totalProvisions.toFixed(0)} €</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-muted rounded-lg">
-                <Euro className="h-5 w-5 text-muted-foreground" />
+          <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-muted rounded-lg">
+                <Euro className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Buchhalter (B)</p>
-                <p className="text-2xl font-bold text-foreground">{totals.totalBookkeeper.toFixed(2)} €</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Buchhalter</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">{totals.totalBookkeeper.toFixed(0)} €</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-muted rounded-lg">
-                <TrendingUp className="h-5 w-5 text-muted-foreground" />
+          <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-muted rounded-lg">
+                <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Bezahlte Kunden</p>
-                <p className="text-2xl font-bold text-foreground">{totals.totalFolders}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Kunden</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">{totals.totalFolders}</p>
               </div>
             </div>
           </CardContent>

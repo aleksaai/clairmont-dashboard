@@ -231,19 +231,19 @@ export function KnowledgeBaseView() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <BookOpen className="w-6 h-6" />
+          <h2 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
+            <BookOpen className="w-5 h-5 md:w-6 md:h-6" />
             Knowledge Base
           </h2>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Verwalte das Wissen für den KI-Assistenten
           </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
+        <Button onClick={() => setIsDialogOpen(true)} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Neuer Eintrag
         </Button>
@@ -252,39 +252,39 @@ export function KnowledgeBaseView() {
       {/* Entries Grid */}
       {entries.length === 0 ? (
         <Card className="bg-card/50 border-border">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <BookOpen className="w-12 h-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center">
+          <CardContent className="flex flex-col items-center justify-center py-8 md:py-12">
+            <BookOpen className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground text-center text-sm md:text-base">
               Noch keine Einträge vorhanden.<br />
               Füge Wissen hinzu, damit die KI bessere Antworten geben kann.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {entries.map((entry) => (
             <Card key={entry.id} className="bg-card/50 border-border hover:border-primary/30 transition-colors">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
+              <CardHeader className="pb-2 p-3 md:p-6 md:pb-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     {entry.content_type === 'pdf' ? (
-                      <Upload className="w-4 h-4 text-primary" />
+                      <Upload className="w-4 h-4 text-primary shrink-0" />
                     ) : (
-                      <FileText className="w-4 h-4 text-primary" />
+                      <FileText className="w-4 h-4 text-primary shrink-0" />
                     )}
-                    <CardTitle className="text-base">{entry.title}</CardTitle>
+                    <CardTitle className="text-sm md:text-base truncate">{entry.title}</CardTitle>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
                     onClick={() => setDeleteEntry(entry)}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
                 <div className="space-y-2">
                   {entry.product_type && (
                     <span className="inline-block text-xs px-2 py-1 rounded-full bg-primary/20 text-primary">
@@ -297,11 +297,11 @@ export function KnowledgeBaseView() {
                     </span>
                   )}
                   {entry.content_type === 'text' ? (
-                    <p className="text-sm text-muted-foreground line-clamp-3">
+                    <p className="text-xs md:text-sm text-muted-foreground line-clamp-3">
                       {entry.content}
                     </p>
                   ) : (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs md:text-sm text-muted-foreground truncate">
                       📄 {entry.file_name}
                     </p>
                   )}
@@ -317,7 +317,7 @@ export function KnowledgeBaseView() {
 
       {/* Add Entry Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-card border-border max-w-lg">
+        <DialogContent className="bg-card border-border max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Neuer Knowledge Base Eintrag</DialogTitle>
           </DialogHeader>

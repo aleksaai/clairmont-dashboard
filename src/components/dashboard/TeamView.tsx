@@ -200,17 +200,17 @@ export function TeamView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-foreground">Team</h2>
         {isAdmin && (
           <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-primary text-primary-foreground">
+              <Button size="sm" className="bg-primary text-primary-foreground w-full sm:w-auto">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Einladen
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Neuen Benutzer einladen</DialogTitle>
               </DialogHeader>
@@ -295,7 +295,7 @@ export function TeamView() {
         )}
       </div>
       
-      <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4">
+      <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-3 md:p-4">
         {loading ? (
           <div className="flex items-center justify-center min-h-[200px]">
             <p className="text-muted-foreground">Lädt...</p>
@@ -313,21 +313,21 @@ export function TeamView() {
           <div className="space-y-3">
             {members.map((member) => (
               <Card key={member.id} className="bg-background/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                <CardContent className="p-3 md:p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <UserAvatar 
                         avatarUrl={member.avatar_url} 
                         fullName={member.full_name} 
                         size="md"
                       />
-                      <div>
-                        <p className="font-medium text-foreground">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground truncate">
                           {member.full_name || 'Kein Name'}
                         </p>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {member.email}
+                        <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
+                          <Mail className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{member.email}</span>
                         </p>
                         {member.partner_code && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
@@ -337,10 +337,11 @@ export function TeamView() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getRoleBadgeVariant(member.role)}>
+                    <div className="flex items-center gap-2 justify-end sm:justify-start">
+                      <Badge variant={getRoleBadgeVariant(member.role)} className="shrink-0">
                         <Shield className="h-3 w-3 mr-1" />
-                        {getRoleLabel(member.role)}
+                        <span className="hidden sm:inline">{getRoleLabel(member.role)}</span>
+                        <span className="sm:hidden">{member.role === 'admin' ? 'Admin' : member.role === 'sachbearbeiter' ? 'SB' : 'V'}</span>
                       </Badge>
                       {isAdmin && member.id !== user?.id && (
                         <AlertDialog>

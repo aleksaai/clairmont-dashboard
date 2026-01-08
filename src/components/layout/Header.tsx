@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Settings, LogOut } from 'lucide-react';
 import logo from '@/assets/logo.png';
+import { MobileMenu } from './MobileMenu';
 
 interface HeaderProps {
   userName: string | null;
@@ -50,18 +51,34 @@ const getInitials = (name: string | null) => {
 };
 
 export function Header({ userName, userRole, avatarUrl, activeSection, onSectionChange, onSignOut, unreadMessageCount = 0 }: HeaderProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
-    <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-6">
+    <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-3 md:px-6">
+      {/* Mobile Menu */}
+      <MobileMenu
+        userName={userName}
+        userRole={userRole}
+        avatarUrl={avatarUrl}
+        activeSection={activeSection}
+        onSectionChange={onSectionChange}
+        onSignOut={onSignOut}
+        unreadMessageCount={unreadMessageCount}
+        isOpen={mobileMenuOpen}
+        onOpenChange={setMobileMenuOpen}
+      />
+
       {/* Left: Logo + Navigation */}
-      <div className="flex items-center gap-8">
+      <div className="flex items-center gap-4 md:gap-8">
         <div className="flex items-center gap-2">
           <img src={logo} alt="Clairmont Advisory" className="h-7 w-auto" />
-          <span className="text-lg font-semibold text-foreground tracking-tight">
+          <span className="hidden md:inline text-lg font-semibold text-foreground tracking-tight">
             Clairmont Advisory
           </span>
         </div>
         
-        <nav className="flex items-center gap-1">
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-1">
           {navItems
             .filter((item) => !item.adminOnly || userRole === 'admin')
             .map((item) => (
@@ -86,8 +103,8 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
         </nav>
       </div>
 
-      {/* Center: Search */}
-      <div className="flex-1 flex justify-center px-8">
+      {/* Center: Search - Hidden on mobile */}
+      <div className="hidden lg:flex flex-1 justify-center px-8">
         <input
           type="text"
           placeholder="Suchen..."
@@ -95,8 +112,11 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
         />
       </div>
 
-      {/* Right: User Info + Avatar with Dropdown */}
-      <div className="flex items-center gap-3">
+      {/* Spacer for mobile */}
+      <div className="flex-1 lg:hidden" />
+
+      {/* Right: User Info + Avatar with Dropdown - Hidden on mobile */}
+      <div className="hidden md:flex items-center gap-3">
         <div className="text-right">
           <p className="text-sm font-medium text-foreground">{userName || 'Benutzer'}</p>
           <p className="text-xs text-muted-foreground">{getRoleLabel(userRole)}</p>
