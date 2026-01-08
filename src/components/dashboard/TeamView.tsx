@@ -79,7 +79,31 @@ export function TeamView() {
         };
       });
 
-      setMembers(memberData);
+      // Filter members based on current user's role
+      // Vertriebler can only see admins and sachbearbeiter (not other vertriebler)
+      // Admins and Sachbearbeiter can see everyone
+      const { data: currentRoleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user?.id)
+        .single();
+      
+      const currentRole = currentRoleData?.role as AppRole;
+      
+      const filteredMembers = memberData.filter(member => {
+        // Always hide yourself from the list
+        if (member.id === user?.id) return true;
+        
+        // Vertriebler can only see admins and sachbearbeiter
+        if (currentRole === 'vertriebler') {
+          return member.role === 'admin' || member.role === 'sachbearbeiter';
+        }
+        
+        // Admins and Sachbearbeiter can see everyone
+        return true;
+      });
+
+      setMembers(filteredMembers);
     } catch (error) {
       console.error('Error fetching members:', error);
       toast.error('Fehler beim Laden der Teammitglieder');
