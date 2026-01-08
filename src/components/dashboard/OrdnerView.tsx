@@ -472,24 +472,27 @@ export function OrdnerView() {
   if (selectedFolder) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={goBack}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <Button variant="ghost" size="sm" onClick={goBack} className="shrink-0">
               ← Zurück
             </Button>
-            {renderBreadcrumb()}
+            <div className="text-sm truncate">
+              {renderBreadcrumb()}
+            </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Prognose Button - only for Steuern */}
             {selectedFolder.product === 'steuern' && (
               <Button 
                 variant="outline" 
+                size="sm"
                 onClick={() => setIsPrognoseOpen(true)}
                 className="border-border"
               >
-                <Calculator className="w-4 h-4 mr-2" />
-                Prognose
+                <Calculator className="w-4 h-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Prognose</span>
               </Button>
             )}
 
@@ -497,19 +500,17 @@ export function OrdnerView() {
             {selectedFolder.product === 'steuern' && selectedFolder.prognose_amount && (
               <Button 
                 variant="default" 
+                size="sm"
                 onClick={handleSendOffer}
                 disabled={isGeneratingPaymentLink || !selectedFolder.customer_email}
                 className="bg-primary"
               >
                 {isGeneratingPaymentLink ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Erstelle Link...
-                  </>
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    <Send className="w-4 h-4 mr-2" />
-                    Angebot senden
+                    <Send className="w-4 h-4 mr-1 md:mr-2" />
+                    <span className="hidden sm:inline">Angebot</span>
                   </>
                 )}
               </Button>
@@ -520,14 +521,15 @@ export function OrdnerView() {
               <>
                 <Button
                   variant="outline"
+                  size="sm"
                   className="border-border"
                   onClick={() => window.open(selectedFolder.payment_link_url!, '_blank', 'noopener,noreferrer')}
                 >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Zahlungslink
+                  <ExternalLink className="w-4 h-4" />
                 </Button>
                 <Button
                   variant="outline"
+                  size="sm"
                   className="border-border"
                   onClick={async () => {
                     try {
@@ -549,21 +551,22 @@ export function OrdnerView() {
             
             <Button 
               variant="outline" 
+              size="sm"
               onClick={() => {
                 setIsOfferMode(false);
                 setIsEmailOpen(true);
               }}
               className="border-border"
             >
-              <Mail className="w-4 h-4 mr-2" />
-              E-Mail
+              <Mail className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">E-Mail</span>
             </Button>
             
             <Select
               value={selectedFolder.status}
               onValueChange={(value) => updateStatus(selectedFolder.id, value as CaseStatus)}
             >
-              <SelectTrigger className="w-48 bg-input/50 border-border">
+              <SelectTrigger className="w-32 sm:w-40 bg-input/50 border-border text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -574,10 +577,10 @@ export function OrdnerView() {
             </Select>
             
             <Label htmlFor="file-upload" className="cursor-pointer">
-              <Button asChild disabled={isUploading}>
+              <Button asChild size="sm" disabled={isUploading}>
                 <span>
-                  <Upload className="w-4 h-4 mr-2" />
-                  {isUploading ? 'Lädt...' : 'Hochladen'}
+                  <Upload className="w-4 h-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">{isUploading ? 'Lädt...' : 'Hochladen'}</span>
                 </span>
               </Button>
             </Label>
@@ -592,54 +595,27 @@ export function OrdnerView() {
         </div>
 
         {/* Customer Info */}
-        <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4">
+        <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-3 md:p-4">
           <h3 className="font-semibold text-foreground">{selectedFolder.customer_name}</h3>
           {selectedFolder.customer_email && (
-            <p className="text-sm text-muted-foreground">{selectedFolder.customer_email}</p>
+            <p className="text-sm text-muted-foreground truncate">{selectedFolder.customer_email}</p>
           )}
-          <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2 text-xs text-muted-foreground">
             <span>Erstellt: {new Date(selectedFolder.created_at).toLocaleDateString('de-DE')}</span>
             <span className="text-muted-foreground/50">|</span>
-            <span>Partnercode: {selectedFolder.partner_code || '—'}</span>
+            <span>Code: {selectedFolder.partner_code || '—'}</span>
             {selectedFolder.product === 'steuern' && selectedFolder.prognose_amount && (
               <>
                 <span className="text-muted-foreground/50">|</span>
-                <span>Prognose: {selectedFolder.prognose_amount.toFixed(2)} €</span>
-                <span className="text-muted-foreground/50">|</span>
-                <span className="text-yellow-500 font-medium">Gebühr: {(selectedFolder.prognose_amount * 0.30).toFixed(2)} €</span>
-                {selectedFolder.payment_status === 'pending' && (
-                  <span className="text-muted-foreground">(Ausstehend)</span>
-                )}
-                {selectedFolder.payment_status === 'paid' && (
-                  <span className="text-primary">(Bezahlt)</span>
-                )}
-                {selectedFolder.payment_status === 'failed' && (
-                  <span className="text-destructive">(Fehlgeschlagen)</span>
-                )}
-              </>
-            )}
-            {/* Installment payment info */}
-            {selectedFolder.status === 'anzahlung_erhalten' && selectedFolder.installment_count && selectedFolder.installment_count > 1 && (
-              <>
-                <span className="text-muted-foreground/50">|</span>
-                <span className="text-amber-500 font-medium">
-                  Ratenzahlung: {selectedFolder.installments_paid || 1} von {selectedFolder.installment_count} bezahlt
-                </span>
-                {selectedFolder.next_payment_date && (
-                  <>
-                    <span className="text-muted-foreground/50">|</span>
-                    <span className="text-amber-500">
-                      Nächste Rate: {new Date(selectedFolder.next_payment_date).toLocaleDateString('de-DE')}
-                    </span>
-                  </>
-                )}
+                <span>Prognose: {selectedFolder.prognose_amount.toFixed(0)} €</span>
+                <span className="text-yellow-500 font-medium">Gebühr: {(selectedFolder.prognose_amount * 0.30).toFixed(0)} €</span>
               </>
             )}
           </div>
         </div>
 
         {/* Documents Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
           {documents.map((doc) => {
             const { Icon, color } = getFileIcon(doc.file_type);
             return (
