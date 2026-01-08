@@ -57,12 +57,15 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
     <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-3 md:px-6">
       {/* Left: Logo + Navigation (Desktop) / Empty space for centering (Mobile) */}
       <div className="hidden md:flex items-center gap-4 md:gap-8">
-        <div className="flex items-center gap-2">
+        <button 
+          onClick={() => onSectionChange('ordner')} 
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        >
           <img src={logo} alt="Clairmont Advisory" className="h-7 w-auto" />
           <span className="hidden md:inline text-lg font-semibold text-foreground tracking-tight">
             Clairmont Advisory
           </span>
-        </div>
+        </button>
         
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
@@ -92,7 +95,9 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
 
       {/* Mobile: Centered Logo */}
       <div className="flex-1 flex justify-center md:hidden">
-        <img src={logo} alt="Clairmont Advisory" className="h-7 w-auto" />
+        <button onClick={() => onSectionChange('ordner')} className="hover:opacity-80 transition-opacity">
+          <img src={logo} alt="Clairmont Advisory" className="h-7 w-auto" />
+        </button>
       </div>
 
       {/* Center: Search - Hidden on mobile */}
