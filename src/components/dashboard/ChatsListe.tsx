@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Send, Paperclip, FileText, Image, X, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -44,9 +44,15 @@ export function ChatsListe() {
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [showChatSearch, setShowChatSearch] = useState(false);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const messagesContentRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatSearchInputRef = useRef<HTMLInputElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const stickToBottomRef = useRef(true);
+  const prevMessagesLengthRef = useRef(0);
+  const initialScrollDoneRef = useRef(false);
+  const conversationKeyRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch all users
@@ -226,24 +232,81 @@ export function ChatsListe() {
     };
   }, [user, selectedUser]);
 
-  // Scroll to bottom when messages change or user is selected (only when not searching)
+  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  };
+
+  const isAtBottom = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return true;
+    const threshold = 64;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  };
+
+  const handleMessagesScroll = () => {
+    if (chatSearchQuery.trim()) return;
+    stickToBottomRef.current = isAtBottom();
+  };
+
+  // Reset scroll state when switching conversations
   useEffect(() => {
-    if (!chatSearchQuery.trim() && messages.length > 0) {
-      // Small delay to ensure DOM is rendered
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-      }, 50);
+    if (!selectedUser) return;
+    stickToBottomRef.current = true;
+    initialScrollDoneRef.current = false;
+    prevMessagesLengthRef.current = 0;
+    messageRefs.current.clear();
+  }, [selectedUser?.id]);
+
+  // Initial scroll to bottom when opening a conversation / first load of messages
+  useLayoutEffect(() => {
+    if (!selectedUser) return;
+    if (chatSearchQuery.trim()) return;
+    if (messages.length === 0) return;
+
+    const convKey = `${user?.id ?? 'anon'}:${selectedUser.id}`;
+    if (conversationKeyRef.current !== convKey) {
+      conversationKeyRef.current = convKey;
+      initialScrollDoneRef.current = false;
+      prevMessagesLengthRef.current = 0;
+      stickToBottomRef.current = true;
+      messageRefs.current.clear();
     }
-  }, [messages, selectedUser]);
-  
-  // Smooth scroll for new messages only
-  const prevMessagesLength = useRef(messages.length);
+
+    if (!initialScrollDoneRef.current) {
+      scrollToBottom('auto');
+      initialScrollDoneRef.current = true;
+      stickToBottomRef.current = true;
+    }
+  }, [selectedUser?.id, messages.length, chatSearchQuery]);
+
+  // Keep bottom stuck when content resizes (e.g. images/signature URLs load)
   useEffect(() => {
-    if (!chatSearchQuery.trim() && messages.length > prevMessagesLength.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const target = messagesContentRef.current;
+    if (!target) return;
+
+    const ro = new ResizeObserver(() => {
+      if (!chatSearchQuery.trim() && stickToBottomRef.current) {
+        scrollToBottom('auto');
+      }
+    });
+
+    ro.observe(target);
+    return () => ro.disconnect();
+  }, [chatSearchQuery]);
+
+  // Smooth scroll for new messages when user is already at bottom
+  useEffect(() => {
+    if (!selectedUser) return;
+    if (chatSearchQuery.trim()) return;
+
+    if (messages.length > prevMessagesLengthRef.current && stickToBottomRef.current) {
+      scrollToBottom('smooth');
     }
-    prevMessagesLength.current = messages.length;
-  }, [messages.length, chatSearchQuery]);
+
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages.length, chatSearchQuery, selectedUser?.id]);
 
   // Get matching message IDs
   const getMatchingMessageIds = () => {
@@ -581,80 +644,83 @@ export function ChatsListe() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-3">
-              {(() => {
-                // Find matching message IDs for highlighting
-                const matchingIds = chatSearchQuery.trim()
-                  ? messages
-                      .filter(msg => 
-                        msg.content.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
-                        msg.file_name?.toLowerCase().includes(chatSearchQuery.toLowerCase())
-                      )
-                      .map(msg => msg.id)
-                  : [];
-                
-                if (messages.length === 0) {
+            <div
+              ref={messagesContainerRef}
+              onScroll={handleMessagesScroll}
+              style={{ overflowAnchor: 'none' }}
+              className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4"
+            >
+              <div ref={messagesContentRef} className="space-y-3">
+                {(() => {
+                  const matchingIds = getMatchingMessageIds();
+
+                  if (messages.length === 0) {
+                    return (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground text-sm text-center px-4">
+                          Noch keine Nachrichten. Schreiben Sie die erste!
+                        </p>
+                      </div>
+                    );
+                  }
+
                   return (
-                    <div className="flex items-center justify-center h-full">
-                      <p className="text-muted-foreground text-sm text-center px-4">
-                        Noch keine Nachrichten. Schreiben Sie die erste!
-                      </p>
-                    </div>
-                  );
-                }
-                
-                return (
-                  <>
-                    {messages.map((message) => {
-                      const isMatch = matchingIds.includes(message.id);
-                      const isCurrentMatch = isMatch && matchingIds[currentMatchIndex] === message.id;
-                      
-                      return (
-                        <div
-                          key={message.id}
-                          ref={(el) => {
-                            if (el) {
-                              messageRefs.current.set(message.id, el);
-                            }
-                          }}
-                          className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
-                        >
+                    <>
+                      {messages.map((message) => {
+                        const isMatch = matchingIds.includes(message.id);
+                        const isCurrentMatch = isMatch && matchingIds[currentMatchIndex] === message.id;
+
+                        return (
                           <div
-                            className={`max-w-[85%] md:max-w-[70%] px-3 py-2 rounded-xl transition-all duration-200 ${
-                              message.sender_id === user?.id
-                                ? 'bg-primary text-primary-foreground rounded-br-sm'
-                                : 'bg-card/80 text-foreground rounded-bl-sm'
-                            } ${isCurrentMatch ? 'ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/20' : ''} ${isMatch && !isCurrentMatch ? 'ring-1 ring-yellow-400/50' : ''}`}
+                            key={message.id}
+                            ref={(el) => {
+                              if (el) {
+                                messageRefs.current.set(message.id, el);
+                              } else {
+                                messageRefs.current.delete(message.id);
+                              }
+                            }}
+                            className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
                           >
-                            {message.file_path && (
-                              <MessageAttachment
-                                filePath={message.file_path}
-                                fileName={message.file_name || 'Datei'}
-                                fileType={message.file_type || ''}
-                                isSender={message.sender_id === user?.id}
-                              />
-                            )}
-                            {message.content && !message.file_path && (
-                              <p className="text-sm">{message.content}</p>
-                            )}
-                            {message.content && message.file_path && message.content !== message.file_name && (
-                              <p className="text-sm mt-2">{message.content}</p>
-                            )}
-                            <p className={`text-xs mt-1 ${
-                              message.sender_id === user?.id 
-                                ? 'text-primary-foreground/70' 
-                                : 'text-muted-foreground'
-                            }`}>
-                              {formatTime(message.created_at)}
-                            </p>
+                            <div
+                              className={`max-w-[85%] md:max-w-[70%] px-3 py-2 rounded-xl transition-all duration-200 ${
+                                message.sender_id === user?.id
+                                  ? 'bg-primary text-primary-foreground rounded-br-sm'
+                                  : 'bg-card/80 text-foreground rounded-bl-sm'
+                              } ${isCurrentMatch ? 'ring-2 ring-ring shadow-md' : ''} ${isMatch && !isCurrentMatch ? 'ring-1 ring-ring/50' : ''}`}
+                            >
+                              {message.file_path && (
+                                <MessageAttachment
+                                  filePath={message.file_path}
+                                  fileName={message.file_name || 'Datei'}
+                                  fileType={message.file_type || ''}
+                                  isSender={message.sender_id === user?.id}
+                                />
+                              )}
+                              {message.content && !message.file_path && (
+                                <p className="text-sm">{message.content}</p>
+                              )}
+                              {message.content && message.file_path && message.content !== message.file_name && (
+                                <p className="text-sm mt-2">{message.content}</p>
+                              )}
+                              <p
+                                className={`text-xs mt-1 ${
+                                  message.sender_id === user?.id
+                                    ? 'text-primary-foreground/70'
+                                    : 'text-muted-foreground'
+                                }`}
+                              >
+                                {formatTime(message.created_at)}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                    <div ref={messagesEndRef} />
-                  </>
-                );
-              })()}
+                        );
+                      })}
+                      <div ref={messagesEndRef} />
+                    </>
+                  );
+                })()}
+              </div>
             </div>
 
             {/* Message Input */}
