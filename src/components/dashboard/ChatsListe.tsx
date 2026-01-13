@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Paperclip, FileText, Image, X } from 'lucide-react';
+import { Send, Paperclip, FileText, Image, X, Search } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,7 +41,10 @@ export function ChatsListe() {
   const [loading, setLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
+  const [showChatSearch, setShowChatSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatSearchInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch all users
@@ -421,75 +424,152 @@ export function ChatsListe() {
         {selectedUser ? (
           <>
             {/* Chat Header */}
-            <div className="h-14 px-3 md:px-4 border-b border-border bg-card/50 backdrop-blur-sm flex items-center gap-3">
-              {/* Back button on mobile */}
-              <button 
-                onClick={() => setSelectedUser(null)}
-                className="md:hidden p-1.5 -ml-1 rounded-lg hover:bg-muted/50"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-              </button>
-              <UserAvatar
-                avatarUrl={selectedUser.avatar_url}
-                fullName={selectedUser.full_name}
-                size="sm"
-              />
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  {selectedUser.full_name || selectedUser.email}
-                </p>
+            <div className="border-b border-border bg-card/50 backdrop-blur-sm">
+              <div className="h-14 px-3 md:px-4 flex items-center gap-3">
+                {/* Back button on mobile */}
+                <button 
+                  onClick={() => {
+                    setSelectedUser(null);
+                    setChatSearchQuery('');
+                    setShowChatSearch(false);
+                  }}
+                  className="md:hidden p-1.5 -ml-1 rounded-lg hover:bg-muted/50"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+                <UserAvatar
+                  avatarUrl={selectedUser.avatar_url}
+                  fullName={selectedUser.full_name}
+                  size="sm"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {selectedUser.full_name || selectedUser.email}
+                  </p>
+                </div>
+                {/* Search toggle button */}
+                <button
+                  onClick={() => {
+                    setShowChatSearch(!showChatSearch);
+                    if (!showChatSearch) {
+                      setTimeout(() => chatSearchInputRef.current?.focus(), 100);
+                    } else {
+                      setChatSearchQuery('');
+                    }
+                  }}
+                  className={`p-2 rounded-lg transition-colors ${
+                    showChatSearch ? 'bg-primary/20 text-primary' : 'hover:bg-muted/50 text-muted-foreground'
+                  }`}
+                  title="Chat durchsuchen"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
               </div>
+              {/* Search input */}
+              {showChatSearch && (
+                <div className="px-3 pb-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      ref={chatSearchInputRef}
+                      type="text"
+                      placeholder="Nachrichten durchsuchen..."
+                      value={chatSearchQuery}
+                      onChange={(e) => setChatSearchQuery(e.target.value)}
+                      className="w-full bg-input/50 border border-border rounded-lg pl-9 pr-8 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    {chatSearchQuery && (
+                      <button
+                        onClick={() => setChatSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted/50"
+                      >
+                        <X className="w-3 h-3 text-muted-foreground" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Messages */}
             <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-3">
-              {messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-muted-foreground text-sm text-center px-4">
-                    Noch keine Nachrichten. Schreiben Sie die erste!
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[85%] md:max-w-[70%] px-3 py-2 rounded-xl ${
-                          message.sender_id === user?.id
-                            ? 'bg-primary text-primary-foreground rounded-br-sm'
-                            : 'bg-card/80 text-foreground rounded-bl-sm'
-                        }`}
-                      >
-                        {message.file_path && (
-                          <MessageAttachment
-                            filePath={message.file_path}
-                            fileName={message.file_name || 'Datei'}
-                            fileType={message.file_type || ''}
-                            isSender={message.sender_id === user?.id}
-                          />
-                        )}
-                        {message.content && !message.file_path && (
-                          <p className="text-sm">{message.content}</p>
-                        )}
-                        {message.content && message.file_path && message.content !== message.file_name && (
-                          <p className="text-sm mt-2">{message.content}</p>
-                        )}
-                        <p className={`text-xs mt-1 ${
-                          message.sender_id === user?.id 
-                            ? 'text-primary-foreground/70' 
-                            : 'text-muted-foreground'
-                        }`}>
-                          {formatTime(message.created_at)}
-                        </p>
-                      </div>
+              {(() => {
+                const filteredMessages = chatSearchQuery.trim()
+                  ? messages.filter(msg => 
+                      msg.content.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
+                      msg.file_name?.toLowerCase().includes(chatSearchQuery.toLowerCase())
+                    )
+                  : messages;
+                
+                if (messages.length === 0) {
+                  return (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-muted-foreground text-sm text-center px-4">
+                        Noch keine Nachrichten. Schreiben Sie die erste!
+                      </p>
                     </div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </>
-              )}
+                  );
+                }
+                
+                if (chatSearchQuery.trim() && filteredMessages.length === 0) {
+                  return (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-muted-foreground text-sm text-center px-4">
+                        Keine Nachrichten gefunden für "{chatSearchQuery}"
+                      </p>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <>
+                    {chatSearchQuery.trim() && (
+                      <div className="text-center py-2">
+                        <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                          {filteredMessages.length} Treffer
+                        </span>
+                      </div>
+                    )}
+                    {filteredMessages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] md:max-w-[70%] px-3 py-2 rounded-xl ${
+                            message.sender_id === user?.id
+                              ? 'bg-primary text-primary-foreground rounded-br-sm'
+                              : 'bg-card/80 text-foreground rounded-bl-sm'
+                          } ${chatSearchQuery.trim() ? 'ring-2 ring-primary/30' : ''}`}
+                        >
+                          {message.file_path && (
+                            <MessageAttachment
+                              filePath={message.file_path}
+                              fileName={message.file_name || 'Datei'}
+                              fileType={message.file_type || ''}
+                              isSender={message.sender_id === user?.id}
+                            />
+                          )}
+                          {message.content && !message.file_path && (
+                            <p className="text-sm">{message.content}</p>
+                          )}
+                          {message.content && message.file_path && message.content !== message.file_name && (
+                            <p className="text-sm mt-2">{message.content}</p>
+                          )}
+                          <p className={`text-xs mt-1 ${
+                            message.sender_id === user?.id 
+                              ? 'text-primary-foreground/70' 
+                              : 'text-muted-foreground'
+                          }`}>
+                            {formatTime(message.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </>
+                );
+              })()}
             </div>
 
             {/* Message Input */}
