@@ -42,8 +42,10 @@ export function TeamView() {
   const isAdmin = currentUserRole === 'admin';
 
   useEffect(() => {
-    fetchMembers();
-  }, []);
+    if (user) {
+      fetchMembers();
+    }
+  }, [user]);
 
   const fetchMembers = async () => {
     try {
