@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Send, Paperclip, FileText, Image, X, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -54,6 +54,9 @@ export function ChatsListe() {
   const initialScrollDoneRef = useRef(false);
   const conversationKeyRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const userScrolledRef = useRef(false);
+  const programmaticScrollRef = useRef(false);
+  const lockBottomUntilRef = useRef(0);
 
   // Fetch all users
   useEffect(() => {
@@ -232,23 +235,54 @@ export function ChatsListe() {
     };
   }, [user, selectedUser]);
 
-  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     const el = messagesContainerRef.current;
     if (!el) return;
+    programmaticScrollRef.current = true;
     el.scrollTo({ top: el.scrollHeight, behavior });
-  };
+    // Reset after scroll completes
+    requestAnimationFrame(() => {
+      programmaticScrollRef.current = false;
+    });
+  }, []);
 
-  const isAtBottom = () => {
+  const isAtBottom = useCallback(() => {
     const el = messagesContainerRef.current;
     if (!el) return true;
     const threshold = 64;
     return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
-  };
+  }, []);
 
-  const handleMessagesScroll = () => {
+  const handleMessagesScroll = useCallback(() => {
     if (chatSearchQuery.trim()) return;
-    stickToBottomRef.current = isAtBottom();
-  };
+    // Ignore programmatic scrolls
+    if (programmaticScrollRef.current) return;
+    
+    // If we're in the lock period and user hasn't explicitly scrolled, keep at bottom
+    if (Date.now() < lockBottomUntilRef.current && !userScrolledRef.current) {
+      if (!isAtBottom()) {
+        scrollToBottom('auto');
+      }
+      return;
+    }
+    
+    // Only change sticky state if user has actually interacted
+    if (userScrolledRef.current) {
+      stickToBottomRef.current = isAtBottom();
+    }
+  }, [chatSearchQuery, isAtBottom, scrollToBottom]);
+
+  // Detect actual user scroll interactions
+  const handleUserScrollIntent = useCallback(() => {
+    userScrolledRef.current = true;
+  }, []);
+
+  // Called when images/media load to keep scroll at bottom
+  const handleMediaLoaded = useCallback(() => {
+    if (chatSearchQuery.trim()) return;
+    if (userScrolledRef.current && !stickToBottomRef.current) return;
+    scrollToBottom('auto');
+  }, [chatSearchQuery, scrollToBottom]);
 
   // Reset scroll state when switching conversations
   useEffect(() => {
@@ -256,6 +290,8 @@ export function ChatsListe() {
     stickToBottomRef.current = true;
     initialScrollDoneRef.current = false;
     prevMessagesLengthRef.current = 0;
+    userScrolledRef.current = false;
+    lockBottomUntilRef.current = Date.now() + 1500; // Lock for 1.5s after opening
     messageRefs.current.clear();
   }, [selectedUser?.id]);
 
@@ -647,6 +683,9 @@ export function ChatsListe() {
             <div
               ref={messagesContainerRef}
               onScroll={handleMessagesScroll}
+              onWheel={handleUserScrollIntent}
+              onTouchStart={handleUserScrollIntent}
+              onPointerDown={handleUserScrollIntent}
               style={{ overflowAnchor: 'none' }}
               className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4"
             >
@@ -695,6 +734,7 @@ export function ChatsListe() {
                                   fileName={message.file_name || 'Datei'}
                                   fileType={message.file_type || ''}
                                   isSender={message.sender_id === user?.id}
+                                  onLoad={handleMediaLoaded}
                                 />
                               )}
                               {message.content && !message.file_path && (
@@ -800,12 +840,14 @@ function MessageAttachment({
   filePath, 
   fileName, 
   fileType, 
-  isSender 
+  isSender,
+  onLoad 
 }: { 
   filePath: string; 
   fileName: string; 
   fileType: string;
   isSender: boolean;
+  onLoad?: () => void;
 }) {
   const [url, setUrl] = useState<string | null>(null);
 
@@ -832,6 +874,7 @@ function MessageAttachment({
           src={url} 
           alt={fileName} 
           className="max-w-full rounded-lg max-h-48 object-cover"
+          onLoad={onLoad}
         />
       </a>
     );
