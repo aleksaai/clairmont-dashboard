@@ -1,5 +1,13 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Send, Paperclip, FileText, Image, X, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
@@ -276,13 +284,6 @@ export function ChatsListe() {
   const handleUserScrollIntent = useCallback(() => {
     userScrolledRef.current = true;
   }, []);
-
-  // Called when images/media load to keep scroll at bottom
-  const handleMediaLoaded = useCallback(() => {
-    if (chatSearchQuery.trim()) return;
-    if (userScrolledRef.current && !stickToBottomRef.current) return;
-    scrollToBottom('auto');
-  }, [chatSearchQuery, scrollToBottom]);
 
   // Reset scroll state when switching conversations
   useEffect(() => {
@@ -734,7 +735,6 @@ export function ChatsListe() {
                                   fileName={message.file_name || 'Datei'}
                                   fileType={message.file_type || ''}
                                   isSender={message.sender_id === user?.id}
-                                  onLoad={handleMediaLoaded}
                                 />
                               )}
                               {message.content && !message.file_path && (
@@ -836,60 +836,120 @@ export function ChatsListe() {
 }
 
 // Component for displaying message attachments
-function MessageAttachment({ 
-  filePath, 
-  fileName, 
-  fileType, 
+function MessageAttachment({
+  filePath,
+  fileName,
+  fileType,
   isSender,
-  onLoad 
-}: { 
-  filePath: string; 
-  fileName: string; 
+}: {
+  filePath: string;
+  fileName: string;
   fileType: string;
   isSender: boolean;
-  onLoad?: () => void;
 }) {
+  const isImage = fileType.startsWith('image/');
   const [url, setUrl] = useState<string | null>(null);
+  const [isLoadingUrl, setIsLoadingUrl] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const getUrl = async () => {
-      const { data } = await supabase.storage
-        .from('chat-attachments')
-        .createSignedUrl(filePath, 3600);
-      setUrl(data?.signedUrl || null);
+    const shouldFetchUrl = !isImage || open;
+    if (!shouldFetchUrl) return;
+
+    let cancelled = false;
+    setIsLoadingUrl(true);
+
+    supabase.storage
+      .from('chat-attachments')
+      .createSignedUrl(filePath, 3600)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+
+        if (error) {
+          console.error('Error creating signed URL:', error);
+          setUrl(null);
+        } else {
+          setUrl(data?.signedUrl ?? null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingUrl(false);
+      });
+
+    return () => {
+      cancelled = true;
     };
-    getUrl();
-  }, [filePath]);
+  }, [filePath, isImage, open]);
+
+  const attachmentContainerClass = `flex items-center gap-2 p-2 rounded-lg w-full ${
+    isSender ? 'bg-primary-foreground/10' : 'bg-muted/50'
+  }`;
+
+  // Images are NOT rendered inline to avoid scroll jumps when they load.
+  // Instead, we show an “image file” tile and load the actual image only when opened.
+  if (isImage) {
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            className={attachmentContainerClass}
+            aria-label={`Bild öffnen: ${fileName}`}
+          >
+            <Image className="w-5 h-5 shrink-0" />
+            <span className="text-sm truncate flex-1">{fileName}</span>
+            <span className={`text-xs ${isSender ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+              Ansehen
+            </span>
+          </button>
+        </DialogTrigger>
+
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="break-all">{fileName}</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex justify-center">
+            {isLoadingUrl ? (
+              <p className="text-sm text-muted-foreground">Lädt…</p>
+            ) : url ? (
+              <img
+                src={url}
+                alt={fileName}
+                className="max-h-[70vh] w-auto max-w-full rounded-md"
+                loading="eager"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">Bild konnte nicht geladen werden.</p>
+            )}
+          </div>
+
+          {url && (
+            <DialogFooter>
+              <Button variant="secondary" asChild>
+                <a href={url} target="_blank" rel="noopener noreferrer">
+                  In neuem Tab öffnen
+                </a>
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (!url) {
     return <p className="text-sm">Lädt...</p>;
   }
 
-  const isImage = fileType.startsWith('image/');
-
-  if (isImage) {
-    return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
-        <img 
-          src={url} 
-          alt={fileName} 
-          className="max-w-full rounded-lg max-h-48 object-cover"
-          onLoad={onLoad}
-        />
-      </a>
-    );
-  }
-
   return (
-    <a 
-      href={url} 
-      target="_blank" 
+    <a
+      href={url}
+      target="_blank"
       rel="noopener noreferrer"
-      className={`flex items-center gap-2 p-2 rounded-lg ${
-        isSender ? 'bg-primary-foreground/10' : 'bg-muted/50'
-      }`}
+      className={attachmentContainerClass}
     >
-      <FileText className="w-5 h-5" />
+      <FileText className="w-5 h-5 shrink-0" />
       <span className="text-sm truncate">{fileName}</span>
     </a>
   );
