@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Paperclip, FileText, Image, X, Search } from 'lucide-react';
+import { Send, Paperclip, FileText, Image, X, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,8 +43,10 @@ export function ChatsListe() {
   const [uploading, setUploading] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [showChatSearch, setShowChatSearch] = useState(false);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatSearchInputRef = useRef<HTMLInputElement>(null);
+  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch all users
@@ -224,10 +226,55 @@ export function ChatsListe() {
     };
   }, [user, selectedUser]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change (only when not searching)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!chatSearchQuery.trim()) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, chatSearchQuery]);
+
+  // Get matching message IDs
+  const getMatchingMessageIds = () => {
+    if (!chatSearchQuery.trim()) return [];
+    return messages
+      .filter(msg => 
+        msg.content.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
+        msg.file_name?.toLowerCase().includes(chatSearchQuery.toLowerCase())
+      )
+      .map(msg => msg.id);
+  };
+
+  // Scroll to current match when search query or match index changes
+  useEffect(() => {
+    const matchingIds = getMatchingMessageIds();
+    if (matchingIds.length > 0 && chatSearchQuery.trim()) {
+      const validIndex = Math.min(currentMatchIndex, matchingIds.length - 1);
+      if (validIndex !== currentMatchIndex) {
+        setCurrentMatchIndex(validIndex);
+      }
+      const targetId = matchingIds[validIndex];
+      const element = messageRefs.current.get(targetId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [chatSearchQuery, currentMatchIndex, messages]);
+
+  // Reset match index when search query changes
+  useEffect(() => {
+    setCurrentMatchIndex(0);
+  }, [chatSearchQuery]);
+
+  const navigateMatch = (direction: 'prev' | 'next') => {
+    const matchingIds = getMatchingMessageIds();
+    if (matchingIds.length === 0) return;
+    
+    if (direction === 'next') {
+      setCurrentMatchIndex(prev => (prev + 1) % matchingIds.length);
+    } else {
+      setCurrentMatchIndex(prev => (prev - 1 + matchingIds.length) % matchingIds.length);
+    }
+  };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -468,24 +515,54 @@ export function ChatsListe() {
               {/* Search input */}
               {showChatSearch && (
                 <div className="px-3 pb-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      ref={chatSearchInputRef}
-                      type="text"
-                      placeholder="Nachrichten durchsuchen..."
-                      value={chatSearchQuery}
-                      onChange={(e) => setChatSearchQuery(e.target.value)}
-                      className="w-full bg-input/50 border border-border rounded-lg pl-9 pr-8 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
-                    {chatSearchQuery && (
-                      <button
-                        onClick={() => setChatSearchQuery('')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted/50"
-                      >
-                        <X className="w-3 h-3 text-muted-foreground" />
-                      </button>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <input
+                        ref={chatSearchInputRef}
+                        type="text"
+                        placeholder="Nachrichten durchsuchen..."
+                        value={chatSearchQuery}
+                        onChange={(e) => setChatSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            navigateMatch(e.shiftKey ? 'prev' : 'next');
+                          }
+                        }}
+                        className="w-full bg-input/50 border border-border rounded-lg pl-9 pr-20 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                      {chatSearchQuery && (
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">
+                            {getMatchingMessageIds().length > 0 
+                              ? `${currentMatchIndex + 1}/${getMatchingMessageIds().length}`
+                              : '0/0'
+                            }
+                          </span>
+                          <button
+                            onClick={() => navigateMatch('prev')}
+                            className="p-0.5 rounded hover:bg-muted/50 disabled:opacity-50"
+                            disabled={getMatchingMessageIds().length === 0}
+                          >
+                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button
+                            onClick={() => navigateMatch('next')}
+                            className="p-0.5 rounded hover:bg-muted/50 disabled:opacity-50"
+                            disabled={getMatchingMessageIds().length === 0}
+                          >
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <button
+                            onClick={() => setChatSearchQuery('')}
+                            className="p-0.5 rounded hover:bg-muted/50"
+                          >
+                            <X className="w-3 h-3 text-muted-foreground" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -494,12 +571,15 @@ export function ChatsListe() {
             {/* Messages */}
             <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-3">
               {(() => {
-                const filteredMessages = chatSearchQuery.trim()
-                  ? messages.filter(msg => 
-                      msg.content.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
-                      msg.file_name?.toLowerCase().includes(chatSearchQuery.toLowerCase())
-                    )
-                  : messages;
+                // Find matching message IDs for highlighting
+                const matchingIds = chatSearchQuery.trim()
+                  ? messages
+                      .filter(msg => 
+                        msg.content.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
+                        msg.file_name?.toLowerCase().includes(chatSearchQuery.toLowerCase())
+                      )
+                      .map(msg => msg.id)
+                  : [];
                 
                 if (messages.length === 0) {
                   return (
@@ -511,61 +591,54 @@ export function ChatsListe() {
                   );
                 }
                 
-                if (chatSearchQuery.trim() && filteredMessages.length === 0) {
-                  return (
-                    <div className="flex items-center justify-center h-full">
-                      <p className="text-muted-foreground text-sm text-center px-4">
-                        Keine Nachrichten gefunden für "{chatSearchQuery}"
-                      </p>
-                    </div>
-                  );
-                }
-                
                 return (
                   <>
-                    {chatSearchQuery.trim() && (
-                      <div className="text-center py-2">
-                        <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
-                          {filteredMessages.length} Treffer
-                        </span>
-                      </div>
-                    )}
-                    {filteredMessages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
-                      >
+                    {messages.map((message) => {
+                      const isMatch = matchingIds.includes(message.id);
+                      const isCurrentMatch = isMatch && matchingIds[currentMatchIndex] === message.id;
+                      
+                      return (
                         <div
-                          className={`max-w-[85%] md:max-w-[70%] px-3 py-2 rounded-xl ${
-                            message.sender_id === user?.id
-                              ? 'bg-primary text-primary-foreground rounded-br-sm'
-                              : 'bg-card/80 text-foreground rounded-bl-sm'
-                          } ${chatSearchQuery.trim() ? 'ring-2 ring-primary/30' : ''}`}
+                          key={message.id}
+                          ref={(el) => {
+                            if (el) {
+                              messageRefs.current.set(message.id, el);
+                            }
+                          }}
+                          className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
                         >
-                          {message.file_path && (
-                            <MessageAttachment
-                              filePath={message.file_path}
-                              fileName={message.file_name || 'Datei'}
-                              fileType={message.file_type || ''}
-                              isSender={message.sender_id === user?.id}
-                            />
-                          )}
-                          {message.content && !message.file_path && (
-                            <p className="text-sm">{message.content}</p>
-                          )}
-                          {message.content && message.file_path && message.content !== message.file_name && (
-                            <p className="text-sm mt-2">{message.content}</p>
-                          )}
-                          <p className={`text-xs mt-1 ${
-                            message.sender_id === user?.id 
-                              ? 'text-primary-foreground/70' 
-                              : 'text-muted-foreground'
-                          }`}>
-                            {formatTime(message.created_at)}
-                          </p>
+                          <div
+                            className={`max-w-[85%] md:max-w-[70%] px-3 py-2 rounded-xl transition-all duration-200 ${
+                              message.sender_id === user?.id
+                                ? 'bg-primary text-primary-foreground rounded-br-sm'
+                                : 'bg-card/80 text-foreground rounded-bl-sm'
+                            } ${isCurrentMatch ? 'ring-2 ring-yellow-400 shadow-lg shadow-yellow-400/20' : ''} ${isMatch && !isCurrentMatch ? 'ring-1 ring-yellow-400/50' : ''}`}
+                          >
+                            {message.file_path && (
+                              <MessageAttachment
+                                filePath={message.file_path}
+                                fileName={message.file_name || 'Datei'}
+                                fileType={message.file_type || ''}
+                                isSender={message.sender_id === user?.id}
+                              />
+                            )}
+                            {message.content && !message.file_path && (
+                              <p className="text-sm">{message.content}</p>
+                            )}
+                            {message.content && message.file_path && message.content !== message.file_name && (
+                              <p className="text-sm mt-2">{message.content}</p>
+                            )}
+                            <p className={`text-xs mt-1 ${
+                              message.sender_id === user?.id 
+                                ? 'text-primary-foreground/70' 
+                                : 'text-muted-foreground'
+                            }`}>
+                              {formatTime(message.created_at)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     <div ref={messagesEndRef} />
                   </>
                 );
