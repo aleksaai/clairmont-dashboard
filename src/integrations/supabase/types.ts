@@ -282,6 +282,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          language: string
         }
         Insert: {
           avatar_url?: string | null
@@ -289,6 +290,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          language?: string
         }
         Update: {
           avatar_url?: string | null
@@ -296,6 +298,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          language?: string
         }
         Relationships: []
       }
