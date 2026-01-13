@@ -226,12 +226,24 @@ export function ChatsListe() {
     };
   }, [user, selectedUser]);
 
-  // Scroll to bottom when messages change (only when not searching)
+  // Scroll to bottom when messages change or user is selected (only when not searching)
   useEffect(() => {
-    if (!chatSearchQuery.trim()) {
+    if (!chatSearchQuery.trim() && messages.length > 0) {
+      // Small delay to ensure DOM is rendered
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }, 50);
+    }
+  }, [messages, selectedUser]);
+  
+  // Smooth scroll for new messages only
+  const prevMessagesLength = useRef(messages.length);
+  useEffect(() => {
+    if (!chatSearchQuery.trim() && messages.length > prevMessagesLength.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, chatSearchQuery]);
+    prevMessagesLength.current = messages.length;
+  }, [messages.length, chatSearchQuery]);
 
   // Get matching message IDs
   const getMatchingMessageIds = () => {
