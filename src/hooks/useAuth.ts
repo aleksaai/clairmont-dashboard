@@ -26,54 +26,9 @@ export function useAuth() {
     loading: true,
   });
 
-  const fetchUserData = async (userId: string) => {
-    try {
-      const [roleResult, profileResult] = await Promise.all([
-        supabase.from('user_roles').select('role').eq('user_id', userId).single(),
-        supabase.from('profiles').select('full_name, avatar_url').eq('id', userId).single(),
-      ]);
-
-      setState(prev => ({
-        ...prev,
-        role: (roleResult.data?.role as AppRole) ?? null,
-        profile: profileResult.data
-          ? {
-              full_name: profileResult.data.full_name,
-              avatar_url: profileResult.data.avatar_url,
-            }
-          : null,
-        loading: false,
-      }));
-    } catch (error) {
-      console.error('fetchUserData failed:', error);
-      setState(prev => ({ ...prev, role: null, profile: null, loading: false }));
-    }
-  };
-
   useEffect(() => {
-    // Safety net: never block the UI forever.
-    const safetyTimeout = window.setTimeout(() => {
-      setState(prev => (prev.loading ? { ...prev, loading: false } : prev));
-    }, 8000);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setState(prev => ({
-        ...prev,
-        session,
-        user: session?.user ?? null,
-      }));
-
-      if (session?.user) {
-        // Avoid unhandled promise rejections.
-        void fetchUserData(session.user.id);
-      } else {
-        setState(prev => ({ ...prev, role: null, profile: null, loading: false }));
-      }
-    });
-
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
         setState(prev => ({
           ...prev,
           session,
@@ -81,22 +36,48 @@ export function useAuth() {
         }));
 
         if (session?.user) {
-          void fetchUserData(session.user.id);
+          setTimeout(() => {
+            fetchUserData(session.user.id);
+          }, 0);
         } else {
-          setState(prev => ({ ...prev, loading: false }));
+          setState(prev => ({ ...prev, role: null, profile: null, loading: false }));
         }
-      })
-      .catch((error) => {
-        console.error('getSession failed:', error);
-        setState(prev => ({ ...prev, loading: false }));
-      });
+      }
+    );
 
-    return () => {
-      window.clearTimeout(safetyTimeout);
-      subscription.unsubscribe();
-    };
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setState(prev => ({
+        ...prev,
+        session,
+        user: session?.user ?? null,
+      }));
+
+      if (session?.user) {
+        fetchUserData(session.user.id);
+      } else {
+        setState(prev => ({ ...prev, loading: false }));
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  const fetchUserData = async (userId: string) => {
+    const [roleResult, profileResult] = await Promise.all([
+      supabase.from('user_roles').select('role').eq('user_id', userId).single(),
+      supabase.from('profiles').select('full_name, avatar_url').eq('id', userId).single(),
+    ]);
+
+    setState(prev => ({
+      ...prev,
+      role: roleResult.data?.role as AppRole ?? null,
+      profile: profileResult.data ? {
+        full_name: profileResult.data.full_name,
+        avatar_url: profileResult.data.avatar_url,
+      } : null,
+      loading: false,
+    }));
+  };
 
   const refreshProfile = async () => {
     if (!state.user?.id) return;
