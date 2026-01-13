@@ -894,10 +894,10 @@ function MessageAttachment({
           <button
             type="button"
             className={attachmentContainerClass}
-            aria-label={`Bild öffnen: ${fileName}`}
+            aria-label="Bild öffnen"
           >
             <Image className="w-5 h-5 shrink-0" />
-            <span className="text-sm truncate flex-1">{fileName}</span>
+            <span className="text-sm">Bild</span>
             <span className={`text-xs ${isSender ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
               Ansehen
             </span>
