@@ -22,6 +22,7 @@ interface ChatUser {
   email: string;
   lastMessage?: string;
   lastMessageTime?: string;
+  lastMessageTimestamp?: string; // Raw ISO timestamp for sorting
   unreadCount?: number;
 }
 
@@ -138,17 +139,18 @@ export function ChatsListe() {
               ...profile,
               lastMessage: lastMsg?.content || '',
               lastMessageTime: lastMsg?.created_at ? formatTime(lastMsg.created_at) : '',
+              lastMessageTimestamp: lastMsg?.created_at || '',
               unreadCount: unreadCount || 0,
             };
           })
         );
 
-        // Sort by last message time
+        // Sort by last message timestamp (most recent first)
         usersWithMessages.sort((a, b) => {
-          if (!a.lastMessageTime && !b.lastMessageTime) return 0;
-          if (!a.lastMessageTime) return 1;
-          if (!b.lastMessageTime) return -1;
-          return 0;
+          if (!a.lastMessageTimestamp && !b.lastMessageTimestamp) return 0;
+          if (!a.lastMessageTimestamp) return 1;
+          if (!b.lastMessageTimestamp) return -1;
+          return new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime();
         });
 
         setUsers(usersWithMessages);
@@ -229,21 +231,32 @@ export function ChatsListe() {
             }
           }
 
-          // Update users list with new message
-          setUsers(prev => prev.map(u => {
-            if (u.id === newMessage.sender_id || u.id === newMessage.receiver_id) {
-              const isFromOther = newMessage.sender_id !== user.id;
-              const isCurrentChat = selectedUser?.id === (isFromOther ? newMessage.sender_id : newMessage.receiver_id);
-              
-              return {
-                ...u,
-                lastMessage: newMessage.content,
-                lastMessageTime: formatTime(newMessage.created_at),
-                unreadCount: isFromOther && !isCurrentChat ? (u.unreadCount || 0) + 1 : u.unreadCount,
-              };
-            }
-            return u;
-          }));
+          // Update users list with new message and re-sort
+          setUsers(prev => {
+            const updated = prev.map(u => {
+              if (u.id === newMessage.sender_id || u.id === newMessage.receiver_id) {
+                const isFromOther = newMessage.sender_id !== user.id;
+                const isCurrentChat = selectedUser?.id === (isFromOther ? newMessage.sender_id : newMessage.receiver_id);
+                
+                return {
+                  ...u,
+                  lastMessage: newMessage.content,
+                  lastMessageTime: formatTime(newMessage.created_at),
+                  lastMessageTimestamp: newMessage.created_at,
+                  unreadCount: isFromOther && !isCurrentChat ? (u.unreadCount || 0) + 1 : u.unreadCount,
+                };
+              }
+              return u;
+            });
+            
+            // Re-sort after updating (most recent first)
+            return updated.sort((a, b) => {
+              if (!a.lastMessageTimestamp && !b.lastMessageTimestamp) return 0;
+              if (!a.lastMessageTimestamp) return 1;
+              if (!b.lastMessageTimestamp) return -1;
+              return new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime();
+            });
+          });
         }
       )
       .subscribe();
