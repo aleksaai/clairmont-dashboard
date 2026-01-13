@@ -8,11 +8,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Send, Paperclip, FileText, Image, X, Search, ChevronUp, ChevronDown, Download } from 'lucide-react';
+import { Send, Paperclip, FileText, Image, X, Search, ChevronUp, ChevronDown, Download, ArrowLeft } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ChatUser {
   id: string;
@@ -41,6 +42,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function ChatsListe() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -65,6 +67,14 @@ export function ChatsListe() {
   const userScrolledRef = useRef(false);
   const programmaticScrollRef = useRef(false);
   const lockBottomUntilRef = useRef(0);
+
+  // Close chat search when switching users on mobile
+  useEffect(() => {
+    if (isMobile && !selectedUser) {
+      setShowChatSearch(false);
+      setChatSearchQuery('');
+    }
+  }, [selectedUser, isMobile]);
 
   // Fetch all users
   useEffect(() => {
@@ -583,49 +593,119 @@ export function ChatsListe() {
         {selectedUser ? (
           <>
             {/* Chat Header */}
-            <div className="border-b border-border bg-card/50 backdrop-blur-sm">
-              <div className="h-14 px-3 md:px-4 flex items-center gap-3">
-                {/* Back button on mobile */}
-                <button 
-                  onClick={() => {
-                    setSelectedUser(null);
-                    setChatSearchQuery('');
-                    setShowChatSearch(false);
-                  }}
-                  className="md:hidden p-1.5 -ml-1 rounded-lg hover:bg-muted/50"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                </button>
-                <UserAvatar
-                  avatarUrl={selectedUser.avatar_url}
-                  fullName={selectedUser.full_name}
-                  size="sm"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {selectedUser.full_name || selectedUser.email}
-                  </p>
-                </div>
-                {/* Search toggle button */}
-                <button
-                  onClick={() => {
-                    setShowChatSearch(!showChatSearch);
-                    if (!showChatSearch) {
-                      setTimeout(() => chatSearchInputRef.current?.focus(), 100);
-                    } else {
+            <div className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
+              {/* Mobile: Separate search mode vs normal header */}
+              {isMobile && showChatSearch ? (
+                // Mobile Search Header - Full width search input
+                <div className="flex items-center gap-2 p-2 h-14">
+                  <button
+                    onClick={() => {
+                      setShowChatSearch(false);
                       setChatSearchQuery('');
+                    }}
+                    className="p-2 rounded-lg hover:bg-muted/50 shrink-0"
+                    aria-label="Suche schließen"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <div className="relative flex-1">
+                    <input
+                      ref={chatSearchInputRef}
+                      type="text"
+                      placeholder="Nachrichten durchsuchen..."
+                      value={chatSearchQuery}
+                      onChange={(e) => setChatSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          navigateMatch(e.shiftKey ? 'prev' : 'next');
+                        }
+                      }}
+                      className="w-full bg-input/50 border border-border rounded-lg px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      autoFocus
+                    />
+                  </div>
+                  {chatSearchQuery && (
+                    <button
+                      onClick={() => setChatSearchQuery('')}
+                      className="p-2 rounded-lg hover:bg-muted/50 shrink-0"
+                      aria-label="Suche löschen"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                // Normal Header
+                <div className="h-14 px-2 md:px-4 flex items-center gap-2 md:gap-3">
+                  {/* Back button on mobile */}
+                  <button 
+                    onClick={() => {
+                      setSelectedUser(null);
+                      setChatSearchQuery('');
+                      setShowChatSearch(false);
+                    }}
+                    className="md:hidden p-2 -ml-1 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors"
+                    aria-label="Zurück"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <UserAvatar
+                    avatarUrl={selectedUser.avatar_url}
+                    fullName={selectedUser.full_name}
+                    size="sm"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {selectedUser.full_name || selectedUser.email}
+                    </p>
+                  </div>
+                  {/* Search toggle button */}
+                  <button
+                    onClick={() => {
+                      setShowChatSearch(true);
+                      setTimeout(() => chatSearchInputRef.current?.focus(), 100);
+                    }}
+                    className="p-2 rounded-lg hover:bg-muted/50 active:bg-muted/70 text-muted-foreground transition-colors"
+                    aria-label="Chat durchsuchen"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Mobile: Search navigation bar when searching */}
+              {isMobile && showChatSearch && chatSearchQuery && (
+                <div className="flex items-center justify-between px-3 pb-2 border-t border-border/50 pt-2">
+                  <span className="text-sm text-muted-foreground">
+                    {getMatchingMessageIds().length > 0 
+                      ? `${currentMatchIndex + 1} von ${getMatchingMessageIds().length} Treffer`
+                      : 'Keine Treffer'
                     }
-                  }}
-                  className={`p-2 rounded-lg transition-colors ${
-                    showChatSearch ? 'bg-primary/20 text-primary' : 'hover:bg-muted/50 text-muted-foreground'
-                  }`}
-                  title="Chat durchsuchen"
-                >
-                  <Search className="w-4 h-4" />
-                </button>
-              </div>
-              {/* Search input */}
-              {showChatSearch && (
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => navigateMatch('prev')}
+                      className="p-2 rounded-lg hover:bg-muted/50 active:bg-muted/70 disabled:opacity-40 transition-colors"
+                      disabled={getMatchingMessageIds().length === 0}
+                      aria-label="Vorheriger Treffer"
+                    >
+                      <ChevronUp className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => navigateMatch('next')}
+                      className="p-2 rounded-lg hover:bg-muted/50 active:bg-muted/70 disabled:opacity-40 transition-colors"
+                      disabled={getMatchingMessageIds().length === 0}
+                      aria-label="Nächster Treffer"
+                    >
+                      <ChevronDown className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop: Search input below header */}
+              {!isMobile && showChatSearch && (
                 <div className="px-3 pb-3">
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1">
@@ -642,7 +722,7 @@ export function ChatsListe() {
                             navigateMatch(e.shiftKey ? 'prev' : 'next');
                           }
                         }}
-                        className="w-full bg-input/50 border border-border rounded-lg pl-9 pr-20 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        className="w-full bg-input/50 border border-border rounded-lg pl-9 pr-24 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                       />
                       {chatSearchQuery && (
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -675,6 +755,15 @@ export function ChatsListe() {
                         </div>
                       )}
                     </div>
+                    <button
+                      onClick={() => {
+                        setShowChatSearch(false);
+                        setChatSearchQuery('');
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               )}
@@ -764,7 +853,7 @@ export function ChatsListe() {
             </div>
 
             {/* Message Input */}
-            <div className="p-2 md:p-3 border-t border-border bg-card/50 backdrop-blur-sm">
+            <div className="p-2 md:p-3 border-t border-border bg-card/50 backdrop-blur-sm shrink-0">
               {selectedFile && (
                 <div className="mb-2 p-2 bg-muted/50 rounded-lg flex items-center gap-2">
                   {selectedFile.type.startsWith('image/') ? (
@@ -788,7 +877,7 @@ export function ChatsListe() {
                   </Button>
                 </div>
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -801,9 +890,9 @@ export function ChatsListe() {
                   size="icon"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="shrink-0"
+                  className="shrink-0 h-10 w-10 md:h-9 md:w-9"
                 >
-                  <Paperclip className="w-4 h-4" />
+                  <Paperclip className="w-5 h-5 md:w-4 md:h-4" />
                 </Button>
                 <input
                   type="text"
@@ -811,16 +900,16 @@ export function ChatsListe() {
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                  className="flex-1 min-w-0 bg-input/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="flex-1 min-w-0 bg-input/50 border border-border rounded-lg px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   disabled={uploading}
                 />
                 <Button
                   onClick={handleSendMessage}
                   size="icon"
-                  className="bg-primary text-primary-foreground shrink-0"
+                  className="bg-primary text-primary-foreground shrink-0 h-10 w-10 md:h-9 md:w-9"
                   disabled={(!messageInput.trim() && !selectedFile) || uploading}
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-5 h-5 md:w-4 md:h-4" />
                 </Button>
               </div>
             </div>
