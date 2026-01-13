@@ -926,11 +926,27 @@ function MessageAttachment({
 
           {url && (
             <DialogFooter className="gap-2 sm:gap-2">
-              <Button variant="secondary" asChild>
-                <a href={url} download={fileName}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Herunterladen
-                </a>
+              <Button 
+                variant="secondary" 
+                onClick={async () => {
+                  try {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(blobUrl);
+                  } catch (error) {
+                    console.error('Download failed:', error);
+                  }
+                }}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Herunterladen
               </Button>
               <Button variant="secondary" asChild>
                 <a href={url} target="_blank" rel="noopener noreferrer">
