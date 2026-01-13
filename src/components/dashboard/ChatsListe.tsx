@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Send, Paperclip, FileText, Image, X, Search, ChevronUp, ChevronDown } from 'lucide-react';
+import { Send, Paperclip, FileText, Image, X, Search, ChevronUp, ChevronDown, Download } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -925,7 +925,13 @@ function MessageAttachment({
           </div>
 
           {url && (
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="secondary" asChild>
+                <a href={url} download={fileName}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Herunterladen
+                </a>
+              </Button>
               <Button variant="secondary" asChild>
                 <a href={url} target="_blank" rel="noopener noreferrer">
                   In neuem Tab öffnen
