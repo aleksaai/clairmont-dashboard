@@ -4,6 +4,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useLanguage } from '@/hooks/useLanguage';
+import { Language } from '@/i18n/translations';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface EinstellungenViewProps {
   userName: string | null;
@@ -24,9 +33,11 @@ const getInitials = (name: string | null) => {
 
 export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onProfileUpdate }: EinstellungenViewProps) {
   const { toast } = useToast();
+  const { language, setLanguage, t } = useLanguage();
   const [newEmail, setNewEmail] = useState(userEmail || '');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isUpdatingLanguage, setIsUpdatingLanguage] = useState(false);
 
   const handleEmailUpdate = async () => {
     if (!newEmail || newEmail === userEmail) return;
@@ -38,17 +49,36 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onPr
       if (error) throw error;
       
       toast({
-        title: 'E-Mail-Änderung angefordert',
-        description: 'Bitte bestätigen Sie die Änderung über den Link in Ihrer neuen E-Mail.',
+        title: t('settingsEmailChangeRequested'),
+        description: t('settingsEmailChangeDescription'),
       });
     } catch (error: any) {
       toast({
-        title: 'Fehler',
+        title: t('error'),
         description: error.message,
         variant: 'destructive',
       });
     } finally {
       setIsUpdatingEmail(false);
+    }
+  };
+
+  const handleLanguageChange = async (newLang: Language) => {
+    setIsUpdatingLanguage(true);
+    try {
+      await setLanguage(newLang);
+      toast({
+        title: t('settingsLanguageUpdated'),
+        description: t('settingsLanguageUpdatedDesc'),
+      });
+    } catch (error: any) {
+      toast({
+        title: t('error'),
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdatingLanguage(false);
     }
   };
 
@@ -64,12 +94,12 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onPr
       if (error) throw error;
       
       toast({
-        title: 'E-Mail gesendet',
-        description: 'Bitte prüfen Sie Ihre E-Mails für den Link zum Zurücksetzen des Passworts.',
+        title: t('settingsEmailSent'),
+        description: t('settingsPasswordResetEmailSent'),
       });
     } catch (error: any) {
       toast({
-        title: 'Fehler',
+        title: t('error'),
         description: error.message,
         variant: 'destructive',
       });
@@ -107,14 +137,14 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onPr
       if (updateError) throw updateError;
 
       toast({
-        title: 'Profilbild aktualisiert',
-        description: 'Ihr Profilbild wurde erfolgreich geändert.',
+        title: t('settingsProfilePictureUpdated'),
+        description: t('settingsProfilePictureUpdatedDesc'),
       });
 
       onProfileUpdate?.();
     } catch (error: any) {
       toast({
-        title: 'Fehler beim Hochladen',
+        title: t('settingsUploadError'),
         description: error.message,
         variant: 'destructive',
       });
@@ -123,11 +153,33 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onPr
 
   return (
     <div className="max-w-xl space-y-6">
-      <h2 className="text-lg font-semibold text-foreground">Einstellungen</h2>
+      <h2 className="text-lg font-semibold text-foreground">{t('settingsTitle')}</h2>
       
+      {/* Language Selection */}
+      <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-3">
+        <p className="text-sm font-medium text-foreground">{t('settingsLanguage')}</p>
+        <p className="text-xs text-muted-foreground mb-2">
+          {t('settingsLanguageDescription')}
+        </p>
+        <Select 
+          value={language} 
+          onValueChange={(value) => handleLanguageChange(value as Language)}
+          disabled={isUpdatingLanguage}
+        >
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="de">🇩🇪 {t('settingsLanguageGerman')}</SelectItem>
+            <SelectItem value="en">🇬🇧 {t('settingsLanguageEnglish')}</SelectItem>
+            <SelectItem value="tr">🇹🇷 {t('settingsLanguageTurkish')}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Profile Picture */}
       <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-4">
-        <p className="text-sm font-medium text-foreground">Profilbild</p>
+        <p className="text-sm font-medium text-foreground">{t('settingsProfilePicture')}</p>
         
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-primary/30 flex items-center justify-center overflow-hidden">
@@ -143,7 +195,7 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onPr
           <div>
             <Label htmlFor="avatar-upload" className="cursor-pointer">
               <Button variant="outline" size="sm" asChild>
-                <span>Bild auswählen</span>
+                <span>{t('settingsSelectImage')}</span>
               </Button>
             </Label>
             <Input
@@ -153,20 +205,20 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onPr
               className="hidden"
               onChange={handleAvatarUpload}
             />
-            <p className="text-xs text-muted-foreground mt-1">JPG, PNG oder GIF</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('settingsImageFormats')}</p>
           </div>
         </div>
       </div>
 
       {/* Name (read-only) */}
       <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-3">
-        <p className="text-sm font-medium text-foreground">Name</p>
-        <p className="text-sm text-muted-foreground">{userName || 'Nicht angegeben'}</p>
+        <p className="text-sm font-medium text-foreground">{t('settingsName')}</p>
+        <p className="text-sm text-muted-foreground">{userName || t('settingsNotSpecified')}</p>
       </div>
 
       {/* Email */}
       <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-3">
-        <Label htmlFor="email" className="text-sm font-medium text-foreground">E-Mail-Adresse</Label>
+        <Label htmlFor="email" className="text-sm font-medium text-foreground">{t('settingsEmail')}</Label>
         <div className="flex gap-2">
           <Input
             id="email"
@@ -180,16 +232,16 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onPr
             disabled={isUpdatingEmail || newEmail === userEmail}
             size="sm"
           >
-            {isUpdatingEmail ? 'Speichern...' : 'Speichern'}
+            {isUpdatingEmail ? t('saving') : t('save')}
           </Button>
         </div>
       </div>
 
       {/* Password Reset */}
       <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-3">
-        <p className="text-sm font-medium text-foreground">Passwort</p>
+        <p className="text-sm font-medium text-foreground">{t('settingsPassword')}</p>
         <p className="text-xs text-muted-foreground mb-2">
-          Wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.
+          {t('settingsPasswordResetInfo')}
         </p>
         <Button 
           variant="outline" 
@@ -197,7 +249,7 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onPr
           onClick={handlePasswordReset}
           disabled={isResettingPassword}
         >
-          {isResettingPassword ? 'Wird gesendet...' : 'Passwort zurücksetzen'}
+          {isResettingPassword ? t('settingsPasswordResetSending') : t('settingsPasswordReset')}
         </Button>
       </div>
     </div>
