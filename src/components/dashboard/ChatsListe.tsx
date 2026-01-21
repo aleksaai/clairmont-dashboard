@@ -145,8 +145,14 @@ export function ChatsListe() {
           })
         );
 
-        // Sort by last message timestamp (most recent first)
+        // Sort by: 1) Unread messages first, 2) Then by last message timestamp
         usersWithMessages.sort((a, b) => {
+          // First: Unread messages at top
+          const aUnread = (a.unreadCount || 0) > 0 ? 1 : 0;
+          const bUnread = (b.unreadCount || 0) > 0 ? 1 : 0;
+          if (bUnread !== aUnread) return bUnread - aUnread;
+          
+          // Second: Sort by last message timestamp
           if (!a.lastMessageTimestamp && !b.lastMessageTimestamp) return 0;
           if (!a.lastMessageTimestamp) return 1;
           if (!b.lastMessageTimestamp) return -1;
@@ -249,8 +255,12 @@ export function ChatsListe() {
               return u;
             });
             
-            // Re-sort after updating (most recent first)
+            // Re-sort: Unread first, then by timestamp
             return updated.sort((a, b) => {
+              const aUnread = (a.unreadCount || 0) > 0 ? 1 : 0;
+              const bUnread = (b.unreadCount || 0) > 0 ? 1 : 0;
+              if (bUnread !== aUnread) return bUnread - aUnread;
+              
               if (!a.lastMessageTimestamp && !b.lastMessageTimestamp) return 0;
               if (!a.lastMessageTimestamp) return 1;
               if (!b.lastMessageTimestamp) return -1;
@@ -554,49 +564,71 @@ export function ChatsListe() {
               Keine Nutzer gefunden
             </div>
           ) : (
-            filteredUsers.map((chatUser) => (
-              <button
-                key={chatUser.id}
-                onClick={() => setSelectedUser(chatUser)}
-                className={`w-full p-3 flex items-center gap-3 text-left transition-colors ${
-                  selectedUser?.id === chatUser.id
-                    ? 'bg-primary/20'
-                    : 'bg-transparent hover:bg-card/50'
-                }`}
-              >
-                <UserAvatar
-                  avatarUrl={chatUser.avatar_url}
-                  fullName={chatUser.full_name}
-                  size="md"
-                />
+            filteredUsers.map((chatUser) => {
+              const hasUnread = (chatUser.unreadCount ?? 0) > 0;
+              return (
+                <button
+                  key={chatUser.id}
+                  onClick={() => setSelectedUser(chatUser)}
+                  className={`w-full p-3 flex items-center gap-3 text-left transition-colors relative ${
+                    selectedUser?.id === chatUser.id
+                      ? 'bg-primary/20'
+                      : hasUnread
+                        ? 'bg-primary/10 hover:bg-primary/15'
+                        : 'bg-transparent hover:bg-card/50'
+                  }`}
+                >
+                  {/* Unread indicator line on the left */}
+                  {hasUnread && (
+                    <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary" />
+                  )}
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {chatUser.full_name || chatUser.email}
-                    </p>
-                    {chatUser.lastMessageTime && (
-                      <span className="text-xs text-muted-foreground">
-                        {chatUser.lastMessageTime}
-                      </span>
+                  <UserAvatar
+                    avatarUrl={chatUser.avatar_url}
+                    fullName={chatUser.full_name}
+                    size="md"
+                  />
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className={`text-sm truncate ${
+                        hasUnread 
+                          ? 'font-bold text-foreground' 
+                          : 'font-medium text-foreground'
+                      }`}>
+                        {chatUser.full_name || chatUser.email}
+                      </p>
+                      {chatUser.lastMessageTime && (
+                        <span className={`text-xs shrink-0 ml-2 ${
+                          hasUnread 
+                            ? 'text-primary font-medium' 
+                            : 'text-muted-foreground'
+                        }`}>
+                          {chatUser.lastMessageTime}
+                        </span>
+                      )}
+                    </div>
+                    {chatUser.lastMessage && (
+                      <p className={`text-xs truncate ${
+                        hasUnread 
+                          ? 'font-semibold text-foreground/80' 
+                          : 'text-muted-foreground'
+                      }`}>
+                        {chatUser.lastMessage}
+                      </p>
                     )}
                   </div>
-                  {chatUser.lastMessage && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {chatUser.lastMessage}
-                    </p>
-                  )}
-                </div>
 
-                {(chatUser.unreadCount ?? 0) > 0 && (
-                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                    <span className="text-xs font-medium text-primary-foreground">
-                      {chatUser.unreadCount}
-                    </span>
-                  </div>
-                )}
-              </button>
-            ))
+                  {hasUnread && (
+                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
+                      <span className="text-xs font-medium text-primary-foreground">
+                        {chatUser.unreadCount}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
       </div>
