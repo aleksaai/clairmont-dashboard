@@ -18,7 +18,17 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Upload, FileText, ChevronRight, Folder, Image, FileSpreadsheet, FileType, File, FileVideo, FileAudio, FileArchive, FileCode, Presentation, Mail, Calculator, Send, Loader2, Copy, ExternalLink } from 'lucide-react';
+import { Plus, Upload, FileText, ChevronRight, Folder, Image, FileSpreadsheet, FileType, File, FileVideo, FileAudio, FileArchive, FileCode, Presentation, Mail, Calculator, Send, Loader2, Copy, ExternalLink, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { EmailDialog } from './EmailDialog';
 import { PrognoseDialog } from './PrognoseDialog';
@@ -140,7 +150,7 @@ const getFileIcon = (fileType: string | null) => {
 };
 
 export function OrdnerView() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { toast } = useToast();
   
   // Navigation state
@@ -158,6 +168,9 @@ export function OrdnerView() {
   const [isPrognoseOpen, setIsPrognoseOpen] = useState(false);
   const [isOfferMode, setIsOfferMode] = useState(false);
   const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<FolderData | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Form state
   const [customerName, setCustomerName] = useState('');
@@ -299,6 +312,60 @@ export function OrdnerView() {
     a.download = doc.name;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const deleteFolder = async (folder: FolderData) => {
+    if (role !== 'admin') {
+      toast({ title: 'Keine Berechtigung', description: 'Nur Administratoren können Ordner löschen.', variant: 'destructive' });
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      // First delete all documents in the folder from storage
+      const { data: docsToDelete } = await supabase
+        .from('documents')
+        .select('file_path')
+        .eq('folder_id', folder.id);
+
+      if (docsToDelete && docsToDelete.length > 0) {
+        const filePaths = docsToDelete.map(d => d.file_path);
+        await supabase.storage.from('documents').remove(filePaths);
+      }
+
+      // Delete documents from database
+      const { error: docsError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('folder_id', folder.id);
+
+      if (docsError) throw docsError;
+
+      // Delete the folder
+      const { error: folderError } = await supabase
+        .from('folders')
+        .delete()
+        .eq('id', folder.id);
+
+      if (folderError) throw folderError;
+
+      toast({ title: 'Ordner gelöscht', description: `"${folder.customer_name}" wurde erfolgreich gelöscht.` });
+      
+      // Reset view if we deleted the currently selected folder
+      if (selectedFolder?.id === folder.id) {
+        setSelectedFolder(null);
+        setDocuments([]);
+      }
+      
+      fetchFolders();
+    } catch (error: any) {
+      console.error('Error deleting folder:', error);
+      toast({ title: 'Fehler', description: error.message || 'Ordner konnte nicht gelöscht werden.', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+      setFolderToDelete(null);
+    }
   };
 
   const handlePrognoseUpdated = (amount: number, installmentCount: number, installmentFee: number) => {
@@ -591,6 +658,21 @@ export function OrdnerView() {
               className="hidden"
               onChange={handleFileUpload}
             />
+
+            {/* Delete Button - Admin only */}
+            {role === 'admin' && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  setFolderToDelete(selectedFolder);
+                  setIsDeleteDialogOpen(true);
+                }}
+              >
+                <Trash2 className="w-4 h-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Löschen</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -675,6 +757,39 @@ export function OrdnerView() {
           currentInstallments={selectedFolder.installment_count}
           onPrognoseUpdated={handlePrognoseUpdated}
         />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Ordner löschen?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Möchten Sie den Ordner "{folderToDelete?.customer_name}" wirklich löschen? 
+                Alle zugehörigen Dokumente werden ebenfalls gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => folderToDelete && deleteFolder(folderToDelete)}
+                disabled={isDeleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Löschen...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Löschen
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
