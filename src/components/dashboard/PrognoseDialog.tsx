@@ -32,21 +32,22 @@ interface PrognoseDialogProps {
 
 type InstallmentOption = 'sofort' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'individuell';
 
-// Get maximum installments based on amount (per Clairmont Advisory Zahlungsplan)
-const getMaxInstallments = (amount: number): number => {
-  if (amount >= 4500) {
-    return 0; // Individuelle Beratung
-  } else if (amount >= 3000) {
-    return 9; // Bis zu 9 Raten
-  } else if (amount >= 1000) {
-    return 6; // Bis zu 6 Raten
+// Get maximum installments based on fee amount (per Clairmont Advisory Zahlungsplan)
+// Fee = 30% of refund amount
+const getMaxInstallments = (feeAmount: number): number => {
+  if (feeAmount >= 4500) {
+    return 0; // Individuelle Beratung (Erstattung >= 15.000€)
+  } else if (feeAmount >= 900) {
+    return 9; // Bis zu 9 Raten (Erstattung >= 3.000€)
+  } else if (feeAmount >= 300) {
+    return 6; // Bis zu 6 Raten (Erstattung >= 1.000€)
   } else {
-    return 2; // Bis zu 2 Raten
+    return 2; // Bis zu 2 Raten (Erstattung < 1.000€)
   }
 };
 
-// Check if individual consultation is required
-const requiresIndividualConsultation = (amount: number): boolean => amount >= 4500;
+// Check if individual consultation is required (based on fee amount)
+const requiresIndividualConsultation = (feeAmount: number): boolean => feeAmount >= 4500;
 
 export function PrognoseDialog({ 
   isOpen, 
@@ -70,9 +71,9 @@ export function PrognoseDialog({
   const parsedAmount = parseFloat(amount.replace(',', '.')) || 0;
   const feeAmount = parsedAmount * 0.30;
   
-  // Get max installments and check if individual consultation is needed
-  const maxInstallments = getMaxInstallments(parsedAmount);
-  const isIndividualConsultation = requiresIndividualConsultation(parsedAmount);
+  // Get max installments and check if individual consultation is needed (based on fee)
+  const maxInstallments = getMaxInstallments(feeAmount);
+  const isIndividualConsultation = requiresIndividualConsultation(feeAmount);
   
   // Calculate installment fee: 10€ per month for installment payments
   const installmentCount = installments === 'sofort' || installments === 'individuell' ? 1 : parseInt(installments);
@@ -222,17 +223,17 @@ export function PrognoseDialog({
             </Select>
             {parsedAmount > 0 && parsedAmount < 1000 && (
               <p className="text-xs text-muted-foreground">
-                Bis 1.000 €: Sofortzahlung oder max. 2 Raten
+                Bis 1.000 € Erstattung: Sofortzahlung oder max. 2 Raten
               </p>
             )}
             {parsedAmount >= 1000 && parsedAmount < 3000 && (
               <p className="text-xs text-muted-foreground">
-                1.000 € – 3.000 €: Bis zu 6 Raten möglich
+                1.000 € – 3.000 € Erstattung: Bis zu 6 Raten möglich
               </p>
             )}
-            {parsedAmount >= 3000 && parsedAmount < 4500 && (
+            {parsedAmount >= 3000 && parsedAmount < 15000 && (
               <p className="text-xs text-muted-foreground">
-                3.000 € – 4.500 €: Bis zu 9 Raten möglich
+                3.000 € – 15.000 € Erstattung: Bis zu 9 Raten möglich
               </p>
             )}
           </div>
@@ -244,7 +245,7 @@ export function PrognoseDialog({
               <div className="text-sm">
                 <p className="font-medium text-warning">Individuelle Beratung erforderlich</p>
                 <p className="text-muted-foreground mt-1">
-                  Bei Beträgen ab 4.500 € ist eine individuelle Zahlungsvereinbarung notwendig. 
+                  Bei einer Gebühr ab 4.500 € (Erstattung ab 15.000 €) ist eine individuelle Zahlungsvereinbarung notwendig. 
                   Bitte kontaktieren Sie den Kunden direkt.
                 </p>
               </div>
