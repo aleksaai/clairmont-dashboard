@@ -35,7 +35,7 @@ import { PrognoseDialog } from './PrognoseDialog';
 
 // Include all database enum values for type compatibility, but only show relevant ones in UI
 type CaseStatus = 'neu' | 'bezahlt' | 'in_bearbeitung' | 'abgeschlossen' | 'einspruch' | 'anfrage_eingegangen' | 'prognose_erstellt' | 'angebot_gesendet' | 'anzahlung_erhalten' | 'einspruch_nacharbeit' | 'rueckstand';
-type ProductType = 'steuern' | 'kredit' | 'versicherung';
+type ProductType = 'steuern' | 'kredit' | 'versicherung' | 'problemfall';
 
 interface FolderData {
   id: string;
@@ -69,6 +69,7 @@ const productStatuses: Record<ProductType, CaseStatus[]> = {
   steuern: ['anfrage_eingegangen', 'prognose_erstellt', 'angebot_gesendet', 'anzahlung_erhalten', 'rueckstand', 'bezahlt', 'einspruch_nacharbeit'],
   kredit: ['neu', 'anzahlung_erhalten', 'rueckstand', 'bezahlt', 'einspruch'],
   versicherung: ['neu', 'anzahlung_erhalten', 'rueckstand', 'bezahlt', 'einspruch'],
+  problemfall: ['neu', 'abgeschlossen'],
 };
 
 const statusLabels: Record<CaseStatus, string> = {
@@ -101,9 +102,23 @@ const productConfig: Record<ProductType, { label: string; color: string; bgColor
     color: 'text-yellow-400',
     bgColor: 'bg-yellow-500/20 border-yellow-500/30'
   },
+  problemfall: { 
+    label: 'Problemfälle', 
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/20 border-red-500/30'
+  },
 };
 
-const allProducts: ProductType[] = ['steuern', 'versicherung', 'kredit'];
+const allProducts: ProductType[] = ['steuern', 'versicherung', 'kredit', 'problemfall'];
+
+// Get context-dependent status label (for Problemfälle)
+const getStatusLabel = (status: CaseStatus, product?: ProductType): string => {
+  if (product === 'problemfall') {
+    if (status === 'neu') return 'Offen';
+    if (status === 'abgeschlossen') return 'Erledigt';
+  }
+  return statusLabels[status];
+};
 
 // Get icon based on file type
 const getFileIcon = (fileType: string | null) => {
@@ -472,7 +487,7 @@ export function OrdnerView() {
   const getBreadcrumb = () => {
     const parts: string[] = ['Drive'];
     if (selectedProduct) parts.push(productConfig[selectedProduct].label);
-    if (selectedStatus) parts.push(statusLabels[selectedStatus]);
+    if (selectedStatus && selectedProduct) parts.push(getStatusLabel(selectedStatus, selectedProduct));
     if (selectedFolder) parts.push(selectedFolder.customer_name);
     return parts;
   };
@@ -638,7 +653,7 @@ export function OrdnerView() {
               </SelectTrigger>
               <SelectContent>
                 {productStatuses[selectedFolder.product].map((status) => (
-                  <SelectItem key={status} value={status}>{statusLabels[status]}</SelectItem>
+                  <SelectItem key={status} value={status}>{getStatusLabel(status, selectedFolder.product)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -820,7 +835,7 @@ export function OrdnerView() {
               <div className="space-y-4 pt-4">
                 <div className="bg-muted/30 rounded-lg p-3 text-sm">
                   <p><strong>Produkt:</strong> {productConfig[selectedProduct].label}</p>
-                  <p><strong>Status:</strong> {statusLabels[selectedStatus]}</p>
+                  <p><strong>Status:</strong> {getStatusLabel(selectedStatus, selectedProduct)}</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="customer-name">Kundenname *</Label>
@@ -939,7 +954,7 @@ export function OrdnerView() {
                     <Folder className={`w-5 h-5 ${config.color}`} />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">{statusLabels[status]}</p>
+                    <p className="font-medium text-foreground">{getStatusLabel(status, selectedProduct)}</p>
                     <p className="text-sm text-muted-foreground">
                       {count} {count === 1 ? 'Kundenordner' : 'Kundenordner'}
                     </p>

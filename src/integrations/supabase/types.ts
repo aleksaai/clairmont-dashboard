@@ -351,7 +351,7 @@ export type Database = {
         | "anzahlung_erhalten"
         | "einspruch_nacharbeit"
         | "rueckstand"
-      product_type: "steuern" | "kredit" | "versicherung"
+      product_type: "steuern" | "kredit" | "versicherung" | "problemfall"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -493,7 +493,7 @@ export const Constants = {
         "einspruch_nacharbeit",
         "rueckstand",
       ],
-      product_type: ["steuern", "kredit", "versicherung"],
+      product_type: ["steuern", "kredit", "versicherung", "problemfall"],
     },
   },
 } as const
