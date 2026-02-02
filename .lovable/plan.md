@@ -1,83 +1,170 @@
 
-# Plan: Korrektur der 4.500€-Regel für individuelle Beratung
+
+# Plan: Problemfälle-Bereich im Drive
 
 ## Zusammenfassung
 
-Die Schwelle für "Individuelle Beratung erforderlich" muss korrigiert werden. Aktuell wird diese ausgelöst, wenn die **Kundenerstattung** 4.500€ erreicht. Die korrekte Logik ist: Individuelle Beratung wird ausgelöst, wenn die **interne Gebühr** (30% der Erstattung) 4.500€ erreicht.
+Wir fügen einen vierten Kategoriebereich "Problemfälle" im Drive hinzu, der:
+- Neben Steuerfälle, Kreditfälle und Baufinanzierungsfälle erscheint
+- Für **alle Benutzer sichtbar** ist (unabhängig vom Partner-Code)
+- Von **allen Mitarbeitern** (inkl. Vertriebler) erstellt werden kann
+- Eigene Status-Stufen hat: **Offen** und **Erledigt**
 
-## Auswirkung der Änderung
+## Visuelle Darstellung
 
-| Szenario | Aktuell | Neu (korrigiert) |
-|----------|---------|------------------|
-| Erstattung 4.500€ → Gebühr 1.350€ | Individuelle Beratung | Bis zu 9 Raten möglich |
-| Erstattung 10.000€ → Gebühr 3.000€ | Individuelle Beratung | Bis zu 9 Raten möglich |
-| Erstattung 15.000€ → Gebühr 4.500€ | Individuelle Beratung | Individuelle Beratung |
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│                          Mein Drive                                  │
+├─────────────────┬─────────────────┬─────────────────┬───────────────┤
+│   Steuerfälle   │   Kreditfälle   │  Baufinanzierung│  PROBLEMFÄLLE │
+│      (blau)     │     (gelb)      │     (türkis)    │     (rot)     │
+│    12 Ordner    │    5 Ordner     │     3 Ordner    │   4 Ordner    │
+└─────────────────┴─────────────────┴─────────────────┴───────────────┘
+```
 
 ## Änderungen
 
-### Datei: `src/components/dashboard/PrognoseDialog.tsx`
+### 1. Datenbank: Neuer Produkttyp
 
-1. **Funktion `getMaxInstallments` anpassen**
-   - Aktuelle Logik basiert auf dem Erstattungsbetrag
-   - Neue Logik basiert auf der Gebühr (30% der Erstattung)
-   - Schwellenwerte entsprechend anpassen:
-     - Gebühr >= 4.500€ (= Erstattung >= 15.000€) → Individuelle Beratung
-     - Gebühr >= 900€ (= Erstattung >= 3.000€) → Bis zu 9 Raten
-     - Gebühr >= 300€ (= Erstattung >= 1.000€) → Bis zu 6 Raten
-     - Gebühr < 300€ (= Erstattung < 1.000€) → Bis zu 2 Raten
+**Migration: Enum erweitern**
 
-2. **Funktion `requiresIndividualConsultation` anpassen**
-   - Von `amount >= 4500` zu `amount * 0.30 >= 4500` (oder `amount >= 15000`)
+Der `product_type` Enum wird um `problemfall` erweitert:
 
-3. **Hinweistexte aktualisieren**
-   - Die Erklärungstexte unter dem Dropdown anpassen, um die neuen Schwellenwerte zu reflektieren
+```sql
+ALTER TYPE product_type ADD VALUE 'problemfall';
+```
+
+### 2. Datenbank: RLS-Policy für Sichtbarkeit
+
+**Neue RLS-Policy für Problemfälle**
+
+Problemfälle sollen für alle authentifizierten Benutzer sichtbar sein (ohne Partner-Code-Einschränkung):
+
+```sql
+CREATE POLICY "All users can view problem cases"
+ON public.folders
+FOR SELECT
+USING (
+  auth.uid() IS NOT NULL 
+  AND product = 'problemfall'
+);
+
+CREATE POLICY "All users can create problem cases"
+ON public.folders
+FOR INSERT
+WITH CHECK (
+  auth.uid() IS NOT NULL 
+  AND product = 'problemfall'
+);
+```
+
+### 3. Frontend: OrdnerView.tsx anpassen
+
+**Datei:** `src/components/dashboard/OrdnerView.tsx`
+
+#### 3.1 Neuer Produkttyp hinzufügen
+
+```typescript
+type ProductType = 'steuern' | 'kredit' | 'versicherung' | 'problemfall';
+
+const allProducts: ProductType[] = ['steuern', 'versicherung', 'kredit', 'problemfall'];
+```
+
+#### 3.2 Produktkonfiguration erweitern
+
+```typescript
+const productConfig: Record<ProductType, { label: string; color: string; bgColor: string }> = {
+  // ... bestehende Einträge ...
+  problemfall: { 
+    label: 'Problemfälle', 
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/20 border-red-500/30'
+  },
+};
+```
+
+#### 3.3 Status-Optionen für Problemfälle
+
+```typescript
+const productStatuses: Record<ProductType, CaseStatus[]> = {
+  // ... bestehende Einträge ...
+  problemfall: ['neu', 'abgeschlossen'], // Offen & Erledigt
+};
+
+const statusLabels: Record<CaseStatus, string> = {
+  // ... bestehende Einträge ...
+  // 'neu' wird zu 'Offen' umgelabelt für Problemfälle (kontextabhängig)
+};
+```
+
+#### 3.4 Kontextabhängige Labels
+
+Für Problemfälle zeigen wir "Offen" statt "Neu" und "Erledigt" statt "Abgeschlossen":
+
+```typescript
+const getStatusLabel = (status: CaseStatus, product: ProductType) => {
+  if (product === 'problemfall') {
+    if (status === 'neu') return 'Offen';
+    if (status === 'abgeschlossen') return 'Erledigt';
+  }
+  return statusLabels[status];
+};
+```
+
+### 4. Frontend: Ordner-Erstellung anpassen
+
+Die Ordner-Erstellung für Problemfälle:
+- Benötigt nur **Kundenname** (kein E-Mail erforderlich)
+- Partner-Code wird automatisch vom erstellenden Benutzer übernommen (für Tracking)
+- Status startet bei "neu" (= Offen)
+
+### 5. Supabase Types aktualisieren
+
+Die TypeScript-Types werden automatisch nach der Migration aktualisiert und enthalten dann `'problemfall'` als gültigen Wert für `product_type`.
 
 ---
 
-## Technische Details
+## Sicherheits-Konzept
 
-### Aktuelle Funktionen (zu ändern):
+| Rolle | Problemfälle sehen | Problemfälle erstellen | Problemfälle löschen |
+|-------|-------------------|----------------------|---------------------|
+| Admin | Alle | Ja | Ja |
+| Sachbearbeiter | Alle | Ja | Nein |
+| Vertriebler | Alle | Ja | Nein |
 
-```typescript
-// AKTUELL - basiert auf Erstattungsbetrag
-const getMaxInstallments = (amount: number): number => {
-  if (amount >= 4500) return 0;      // Individuelle Beratung
-  else if (amount >= 3000) return 9;  // Bis zu 9 Raten
-  else if (amount >= 1000) return 6;  // Bis zu 6 Raten
-  else return 2;                       // Bis zu 2 Raten
-};
+**Wichtig:** Im Gegensatz zu normalen Ordnern sind Problemfälle für **alle sichtbar**, damit das gesamte Team helfen kann.
 
-const requiresIndividualConsultation = (amount: number): boolean => 
-  amount >= 4500;
-```
+---
 
-### Neue Funktionen (nach Korrektur):
+## Benutzeroberfläche
 
-```typescript
-// NEU - basiert auf Gebühr (30% der Erstattung)
-const getMaxInstallments = (feeAmount: number): number => {
-  if (feeAmount >= 4500) return 0;      // Individuelle Beratung (Erstattung >= 15.000€)
-  else if (feeAmount >= 900) return 9;  // Bis zu 9 Raten (Erstattung >= 3.000€)
-  else if (feeAmount >= 300) return 6;  // Bis zu 6 Raten (Erstattung >= 1.000€)
-  else return 2;                         // Bis zu 2 Raten
-};
+### Neuer Ordner erstellen (Problemfall)
 
-const requiresIndividualConsultation = (feeAmount: number): boolean => 
-  feeAmount >= 4500;
-```
+| Feld | Pflicht | Beschreibung |
+|------|---------|--------------|
+| Kundenname | Ja | Name des Problemfalls (z.B. "Max Mustermann") |
+| E-Mail | Nein | Optional für Kommunikation |
+| Partner-Code | Automatisch | Wird vom System übernommen |
 
-### Angepasste Hinweistexte:
-
-| Gebührenbereich | Erstattungsbereich | Hinweistext |
-|-----------------|-------------------|-------------|
-| < 300€ | < 1.000€ | "Bis 1.000 €: Sofortzahlung oder max. 2 Raten" |
-| 300€ - 899€ | 1.000€ - 2.999€ | "1.000 € – 3.000 €: Bis zu 6 Raten möglich" |
-| 900€ - 4.499€ | 3.000€ - 14.999€ | "3.000 € – 15.000 €: Bis zu 9 Raten möglich" |
-| >= 4.500€ | >= 15.000€ | Warnung: Individuelle Beratung erforderlich |
-
-### Angepasster Warnungstext:
+### Status-Anzeige
 
 ```text
-"Bei einer Gebühr ab 4.500 € (Erstattung ab 15.000 €) ist eine 
-individuelle Zahlungsvereinbarung notwendig."
+Problemfälle
+├── Offen (3 Kundenordner)
+│   ├── Max Mustermann
+│   ├── Erika Musterfrau
+│   └── Hans Beispiel
+└── Erledigt (1 Kundenordner)
+    └── Peter Problem (gelöst)
 ```
+
+---
+
+## Zusammenfassung der Änderungen
+
+| Datei | Änderung |
+|-------|----------|
+| Neue Migration | Enum erweitern + RLS-Policies |
+| `src/components/dashboard/OrdnerView.tsx` | Produkttyp + Konfiguration + Status-Labels |
+| `src/integrations/supabase/types.ts` | Wird automatisch aktualisiert |
+
