@@ -181,7 +181,7 @@ serve(async (req) => {
               ? (parseFloat(feeAmount) / installmentCount).toFixed(2).replace('.', ',') 
               : null;
             
-            const teamEmail = "aleksa@spalevic-consulting.de";
+            const teamEmail = "service@clairmont-advisory.com";
             
             // Email to team
             const teamEmailHtml = `
