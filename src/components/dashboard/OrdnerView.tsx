@@ -186,6 +186,8 @@ export function OrdnerView() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<FolderData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditingPartnerCode, setIsEditingPartnerCode] = useState(false);
+  const [editPartnerCode, setEditPartnerCode] = useState('');
   
   // Form state
   const [customerName, setCustomerName] = useState('');
