@@ -429,10 +429,10 @@ export function ProvisionsrechnerView() {
                             <span className="text-foreground">{folder.customer_name}</span>
                             <div className="flex gap-4">
                               <span className="text-muted-foreground">
-                                {(folder.prognose_amount || 0).toFixed(2)} €
+                                {((folder.prognose_amount || 0) * 0.3).toFixed(2)} € Gebühr
                               </span>
                               <span className="text-primary font-medium">
-                                → {calculateProvision(partner.partnerCode, folder.prognose_amount || 0).toFixed(2)} €
+                                → {calculateProvision(partner.partnerCode, (folder.prognose_amount || 0) * 0.3).toFixed(2)} €
                               </span>
                             </div>
                           </div>
