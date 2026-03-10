@@ -702,7 +702,40 @@ export function OrdnerView() {
           <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2 text-xs text-muted-foreground">
             <span>Erstellt: {new Date(selectedFolder.created_at).toLocaleDateString('de-DE')}</span>
             <span className="text-muted-foreground/50">|</span>
-            <span>Code: {selectedFolder.partner_code || '—'}</span>
+            {role === 'admin' && isEditingPartnerCode ? (
+              <span className="flex items-center gap-1">
+                <span>Code:</span>
+                <Input
+                  value={editPartnerCode}
+                  onChange={(e) => setEditPartnerCode(e.target.value)}
+                  className="h-6 w-28 text-xs px-1.5 py-0"
+                  placeholder="Partnercode"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSavePartnerCode();
+                    if (e.key === 'Escape') setIsEditingPartnerCode(false);
+                  }}
+                />
+                <button onClick={handleSavePartnerCode} className="text-green-500 hover:text-green-400"><Check className="h-3.5 w-3.5" /></button>
+                <button onClick={() => setIsEditingPartnerCode(false)} className="text-destructive hover:text-destructive/80"><X className="h-3.5 w-3.5" /></button>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                Code: {selectedFolder.partner_code || '—'}
+                {role === 'admin' && (
+                  <button
+                    onClick={() => {
+                      setEditPartnerCode(selectedFolder.partner_code || '');
+                      setIsEditingPartnerCode(true);
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Partnercode bearbeiten"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
+              </span>
+            )}
             {selectedFolder.product === 'steuern' && selectedFolder.prognose_amount && (
               <>
                 <span className="text-muted-foreground/50">|</span>
