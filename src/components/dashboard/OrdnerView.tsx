@@ -219,6 +219,23 @@ export function OrdnerView() {
     setIsLoading(false);
   };
 
+  const handleSavePartnerCode = async () => {
+    if (!selectedFolder) return;
+    const newCode = editPartnerCode.trim() || null;
+    const { error } = await supabase
+      .from('folders')
+      .update({ partner_code: newCode })
+      .eq('id', selectedFolder.id);
+    if (error) {
+      toast({ title: 'Fehler', description: 'Partnercode konnte nicht gespeichert werden.', variant: 'destructive' });
+    } else {
+      setSelectedFolder({ ...selectedFolder, partner_code: newCode });
+      setFolders(prev => prev.map(f => f.id === selectedFolder.id ? { ...f, partner_code: newCode } : f));
+      toast({ title: 'Partnercode aktualisiert' });
+    }
+    setIsEditingPartnerCode(false);
+  };
+
   const fetchDocuments = async (folderId: string) => {
     const { data, error } = await supabase
       .from('documents')
