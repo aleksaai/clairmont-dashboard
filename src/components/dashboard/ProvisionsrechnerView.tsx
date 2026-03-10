@@ -326,7 +326,7 @@ export function ProvisionsrechnerView() {
                 <Euro className="h-4 w-4 md:h-5 md:w-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Umsatz</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Umsatz (30% Gebühr)</p>
                 <p className="text-lg md:text-2xl font-bold text-foreground">{totals.totalAmount.toFixed(0)} €</p>
               </div>
             </div>
