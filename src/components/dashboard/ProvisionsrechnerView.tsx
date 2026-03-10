@@ -250,7 +250,8 @@ export function ProvisionsrechnerView() {
       const code = folder.partner_code?.toUpperCase();
       if (!code) return;
       
-      const amount = folder.prognose_amount || 0;
+      const rawAmount = folder.prognose_amount || 0;
+      const amount = rawAmount * 0.3; // 30% Beratungsgebühr = unser Umsatz
       const provision = calculateProvision(code, amount);
       const bookkeeper = getBookkeeperFee(code);
       
@@ -325,7 +326,7 @@ export function ProvisionsrechnerView() {
                 <Euro className="h-4 w-4 md:h-5 md:w-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Umsatz</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Umsatz (30% Gebühr)</p>
                 <p className="text-lg md:text-2xl font-bold text-foreground">{totals.totalAmount.toFixed(0)} €</p>
               </div>
             </div>
@@ -428,10 +429,10 @@ export function ProvisionsrechnerView() {
                             <span className="text-foreground">{folder.customer_name}</span>
                             <div className="flex gap-4">
                               <span className="text-muted-foreground">
-                                {(folder.prognose_amount || 0).toFixed(2)} €
+                                {((folder.prognose_amount || 0) * 0.3).toFixed(2)} € Gebühr
                               </span>
                               <span className="text-primary font-medium">
-                                → {calculateProvision(partner.partnerCode, folder.prognose_amount || 0).toFixed(2)} €
+                                → {calculateProvision(partner.partnerCode, (folder.prognose_amount || 0) * 0.3).toFixed(2)} €
                               </span>
                             </div>
                           </div>
