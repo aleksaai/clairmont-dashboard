@@ -157,52 +157,41 @@ serve(async (req) => {
       console.error('Error creating PDF document entry:', pdfDocError);
     }
 
-    // Upload additional files if provided
+    // Upload additional files - either from files array (base64) or documentUrls (signed URLs)
     const uploadedFiles: string[] = [pdfFileName];
     
     if (payload.files && payload.files.length > 0) {
-      console.log(`Uploading ${payload.files.length} additional files`);
-      
+      console.log(`Uploading ${payload.files.length} additional files (base64)`);
       for (const file of payload.files) {
         try {
           const filePath = `${folder.id}/${file.name}`;
           const fileData = Uint8Array.from(atob(file.data), c => c.charCodeAt(0));
-          
-          // Get file extension
           const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-          
-          console.log('Uploading file:', file.name);
-          const { error: fileUploadError } = await supabase.storage
-            .from('documents')
-            .upload(filePath, fileData, {
-              contentType: file.type || 'application/octet-stream',
-              upsert: false,
-            });
-
-          if (fileUploadError) {
-            console.error(`Error uploading file ${file.name}:`, fileUploadError);
-            continue;
-          }
-
-          // Create document entry
-          const { error: fileDocError } = await supabase
-            .from('documents')
-            .insert({
-              name: file.name,
-              file_path: filePath,
-              file_type: fileExtension,
-              file_size: fileData.length,
-              folder_id: folder.id,
-              uploaded_by: null, // System upload
-            });
-
-          if (fileDocError) {
-            console.error(`Error creating document entry for ${file.name}:`, fileDocError);
-          } else {
-            uploadedFiles.push(file.name);
-          }
-        } catch (fileError) {
-          console.error(`Error processing file ${file.name}:`, fileError);
+          const { error: fileUploadError } = await supabase.storage.from('documents').upload(filePath, fileData, { contentType: file.type || 'application/octet-stream', upsert: false });
+          if (fileUploadError) { console.error(`Error uploading file ${file.name}:`, fileUploadError); continue; }
+          const { error: fileDocError } = await supabase.from('documents').insert({ name: file.name, file_path: filePath, file_type: fileExtension, file_size: fileData.length, folder_id: folder.id, uploaded_by: null });
+          if (!fileDocError) uploadedFiles.push(file.name);
+        } catch (fileError) { console.error(`Error processing file ${file.name}:`, fileError); }
+      }
+    } else if (payload.documentUrls && Object.keys(payload.documentUrls).length > 0) {
+      console.log('Downloading files from signed URLs...');
+      for (const [category, urls] of Object.entries(payload.documentUrls)) {
+        if (!Array.isArray(urls)) continue;
+        for (const url of urls) {
+          try {
+            const response = await fetch(url);
+            if (!response.ok) { console.error(`Failed to download ${category}: ${response.status}`); continue; }
+            const fileBuffer = new Uint8Array(await response.arrayBuffer());
+            const urlPath = new URL(url).pathname;
+            const originalName = decodeURIComponent(urlPath.split('/').pop() || `${category}_document`);
+            const filePath = `${folder.id}/${originalName}`;
+            const fileExtension = originalName.split('.').pop()?.toLowerCase() || '';
+            const contentType = response.headers.get('content-type') || 'application/octet-stream';
+            const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, fileBuffer, { contentType, upsert: false });
+            if (uploadError) { console.error(`Error uploading ${originalName}:`, uploadError); continue; }
+            const { error: docError } = await supabase.from('documents').insert({ name: originalName, file_path: filePath, file_type: fileExtension, file_size: fileBuffer.length, folder_id: folder.id, uploaded_by: null });
+            if (!docError) { uploadedFiles.push(originalName); console.log(`Downloaded and stored: ${originalName} (${category})`); }
+          } catch (dlError) { console.error(`Error downloading from URL (${category}):`, dlError); }
         }
       }
     }
