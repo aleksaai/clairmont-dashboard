@@ -460,7 +460,7 @@ export function ProvisionsrechnerView() {
                               <span className="text-muted-foreground">
                                 {((folder.prognose_amount || 0) * 0.3).toFixed(2)} € Gebühr
                               </span>
-                              <span className="text-primary font-medium">
+                              <span className="text-emerald-400 font-medium">
                                 → {calculateProvision(partner.partnerCode, (folder.prognose_amount || 0) * 0.3).toFixed(2)} €
                               </span>
                             </div>
