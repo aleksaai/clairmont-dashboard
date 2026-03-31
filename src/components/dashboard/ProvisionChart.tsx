@@ -124,9 +124,9 @@ export function ProvisionChart({ configMap }: ProvisionChartProps) {
               <XAxis dataKey="name" className="text-xs fill-muted-foreground" tick={{ fontSize: 12 }} />
               <YAxis className="text-xs fill-muted-foreground" tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="umsatz" name="Umsatz" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} opacity={0.3} />
-              <Bar dataKey="provisionen" name="Provisionen" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              <Line dataKey="kunden" name="Kunden" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={{ r: 3 }} yAxisId={1} />
+              <Bar dataKey="umsatz" name="Umsatz" fill="#60a5fa" radius={[4, 4, 0, 0]} opacity={0.5} />
+              <Bar dataKey="provisionen" name="Provisionen" fill="#38bdf8" radius={[4, 4, 0, 0]} />
+              <Line dataKey="kunden" name="Kunden" stroke="#a78bfa" strokeWidth={2} dot={{ r: 3 }} yAxisId={1} />
               <YAxis yAxisId={1} orientation="right" tick={{ fontSize: 12 }} className="text-xs fill-muted-foreground" />
             </ComposedChart>
           </ResponsiveContainer>
