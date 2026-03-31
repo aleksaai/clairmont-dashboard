@@ -180,6 +180,23 @@ serve(async (req) => {
       }
     }
 
+    // Notify Vertriebler if partner code exists
+    if (partnerCode) {
+      try {
+        await supabase.functions.invoke('notify-vertriebler', {
+          body: {
+            type: 'new_customer',
+            partnerCode: partnerCode,
+            customerName: customerName,
+            productType: 'kredit',
+          },
+        });
+        console.log('Vertriebler notification sent for partner code:', partnerCode);
+      } catch (notifyError) {
+        console.error('Failed to notify Vertriebler:', notifyError);
+      }
+    }
+
     console.log("Credit webhook processing completed successfully");
     
     return new Response(
