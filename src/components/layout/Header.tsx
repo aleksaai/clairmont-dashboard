@@ -25,7 +25,7 @@ const navItems = [
   { id: 'chats', label: 'Chats' },
   { id: 'team', label: 'Team' },
   { id: 'kb', label: 'KB', adminOnly: true },
-  { id: 'provision', label: 'Provision', adminOnly: true },
+  { id: 'provision', label: 'Provision', roles: ['admin', 'vertriebler'] },
 ];
 
 const getRoleLabel = (role: string | null) => {
