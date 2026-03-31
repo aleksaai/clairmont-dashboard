@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calculator, Euro, Users, TrendingUp, Calendar, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Calculator, Euro, Users, TrendingUp, Calendar, Plus, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,6 +43,7 @@ export function ProvisionsrechnerView() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<ProvisionConfig | null>(null);
+  const [completedPayouts, setCompletedPayouts] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     partner_code: '',
     provision_type: 'percentage' as 'fixed' | 'percentage',
@@ -404,6 +406,114 @@ export function ProvisionsrechnerView() {
 
       {/* Chart - nur für Admins */}
       {isAdmin && <ProvisionChart configMap={configMap} />}
+
+      {/* Auszahlungsliste - nur für Admins */}
+      {isAdmin && provisionsByPartner.length > 0 && (() => {
+        const payoutItems: { id: string; label: string; sublabel: string; amount: number; type: 'provision' | 'sachbearbeiter' }[] = [];
+        
+        provisionsByPartner.forEach(p => {
+          if (p.totalProvision > 0) {
+            payoutItems.push({
+              id: `prov-${p.partnerCode}`,
+              label: p.partnerCode,
+              sublabel: `Provision · ${p.folderCount} ${p.folderCount === 1 ? 'Kunde' : 'Kunden'}`,
+              amount: p.totalProvision,
+              type: 'provision',
+            });
+          }
+          if (p.totalBookkeeper > 0) {
+            payoutItems.push({
+              id: `sb-${p.partnerCode}`,
+              label: `Sachbearbeiter (${p.partnerCode})`,
+              sublabel: `${p.folderCount} ${p.folderCount === 1 ? 'Fall' : 'Fälle'} × ${getBookkeeperFee(p.partnerCode)}€`,
+              amount: p.totalBookkeeper,
+              type: 'sachbearbeiter',
+            });
+          }
+        });
+
+        payoutItems.sort((a, b) => b.amount - a.amount);
+
+        const totalPayout = payoutItems.reduce((s, i) => s + i.amount, 0);
+        const totalProvPayout = payoutItems.filter(i => i.type === 'provision').reduce((s, i) => s + i.amount, 0);
+        const totalSbPayout = payoutItems.filter(i => i.type === 'sachbearbeiter').reduce((s, i) => s + i.amount, 0);
+        const completedCount = payoutItems.filter(i => completedPayouts.has(i.id)).length;
+
+        const togglePayout = (id: string) => {
+          setCompletedPayouts(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+          });
+        };
+
+        const currentMonthLabel = monthOptions.find(o => o.value === selectedMonth)?.label || selectedMonth;
+
+        return (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Euro className="h-5 w-5 text-amber-400" />
+                  <CardTitle className="text-lg">Auszahlungen {currentMonthLabel}</CardTitle>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  {completedCount}/{payoutItems.length} erledigt
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Summary */}
+              <div className="grid grid-cols-3 gap-4 mb-5 p-3 bg-muted/30 rounded-lg">
+                <div>
+                  <p className="text-xs text-muted-foreground">Gesamt</p>
+                  <p className="text-lg font-bold text-foreground">{totalPayout.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Provisionen</p>
+                  <p className="text-lg font-bold text-emerald-400">{totalProvPayout.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Sachbearbeiter</p>
+                  <p className="text-lg font-bold text-sky-400">{totalSbPayout.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €</p>
+                </div>
+              </div>
+
+              {/* Payout list */}
+              <div className="space-y-2">
+                {payoutItems.map(item => {
+                  const done = completedPayouts.has(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                        done ? 'border-emerald-500/30 bg-emerald-500/5 opacity-60' : 'border-border hover:bg-muted/30'
+                      }`}
+                      onClick={() => togglePayout(item.id)}
+                    >
+                      <Checkbox
+                        checked={done}
+                        onCheckedChange={() => togglePayout(item.id)}
+                        className="pointer-events-none"
+                      />
+                      <div className={`flex-1 ${done ? 'line-through' : ''}`}>
+                        <p className="text-sm font-medium text-foreground">{item.label}</p>
+                        <p className="text-xs text-muted-foreground">{item.sublabel}</p>
+                      </div>
+                      <div className={`text-sm font-bold ${
+                        done ? 'text-muted-foreground' : item.type === 'provision' ? 'text-emerald-400' : 'text-sky-400'
+                      }`}>
+                        {item.amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Provisionen nach Partner */}
       <Card>
