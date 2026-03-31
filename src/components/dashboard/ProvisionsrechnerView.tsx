@@ -51,6 +51,21 @@ export function ProvisionsrechnerView() {
   const monthStart = startOfMonth(new Date(selectedMonth + '-01'));
   const monthEnd = endOfMonth(monthStart);
 
+  // Fetch Vertriebler's own partner codes
+  const { data: myPartnerCodes } = useQuery({
+    queryKey: ['my-partner-codes', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('partner_codes')
+        .select('code')
+        .eq('user_id', user.id);
+      if (error) throw error;
+      return data?.map(p => p.code.toUpperCase()) || [];
+    },
+    enabled: isVertriebler && !!user?.id,
+  });
+
   // Fetch provision configs from database
   const { data: provisionConfigs, isLoading: configsLoading } = useQuery({
     queryKey: ['provision-configs'],
@@ -67,9 +82,9 @@ export function ProvisionsrechnerView() {
 
   // Fetch all paid folders for the selected month
   const { data: paidFolders, isLoading: foldersLoading } = useQuery({
-    queryKey: ['paid-folders-provisions', selectedMonth],
+    queryKey: ['paid-folders-provisions', selectedMonth, myPartnerCodes],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('folders')
         .select('id, name, customer_name, partner_code, prognose_amount, updated_at, status')
         .eq('status', 'bezahlt')
@@ -77,9 +92,16 @@ export function ProvisionsrechnerView() {
         .gte('updated_at', monthStart.toISOString())
         .lte('updated_at', monthEnd.toISOString());
       
+      // Vertriebler only see their own partner code folders
+      if (isVertriebler && myPartnerCodes && myPartnerCodes.length > 0) {
+        query = query.in('partner_code', myPartnerCodes);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
+    enabled: isAdmin || (isVertriebler && !!myPartnerCodes),
   });
 
   // Create config lookup map
