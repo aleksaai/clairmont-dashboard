@@ -69,7 +69,7 @@ export function ProvisionChart({ configMap }: ProvisionChartProps) {
 
         const code = f.partner_code?.toUpperCase() || '';
         const config = configMap[code] || configMap['DEFAULT'];
-        if (config) {
+        if (config && code !== 'ALPHA') {
           provisionen += config.provision_type === 'percentage'
             ? rawAmount * (config.provision_value / 100)
             : config.provision_value;

@@ -411,7 +411,7 @@ export function ProvisionsrechnerView() {
       {isAdmin && provisionsByPartner.length > 0 && (() => {
         const payoutItems: { id: string; label: string; sublabel: string; amount: number; type: 'provision' | 'sachbearbeiter' }[] = [];
         
-        provisionsByPartner.forEach(p => {
+        provisionsByPartner.filter(p => p.partnerCode !== 'ALPHA').forEach(p => {
           if (p.totalProvision > 0) {
             payoutItems.push({
               id: `prov-${p.partnerCode}`,
