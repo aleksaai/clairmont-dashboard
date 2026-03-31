@@ -133,15 +133,15 @@ export function ProvisionChart({ configMap }: ProvisionChartProps) {
         </div>
         <div className="flex items-center justify-center gap-6 mt-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-primary/30" />
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#60a5fa', opacity: 0.5 }} />
             <span className="text-muted-foreground">Umsatz (30% Gebühr)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-primary" />
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#38bdf8' }} />
             <span className="text-muted-foreground">Provisionen</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-muted-foreground" />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#a78bfa' }} />
             <span className="text-muted-foreground">Kunden</span>
           </div>
         </div>
