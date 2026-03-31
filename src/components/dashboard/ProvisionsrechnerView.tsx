@@ -320,7 +320,7 @@ export function ProvisionsrechnerView() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Calculator className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+          <Calculator className="h-5 w-5 md:h-6 md:w-6 text-sky-400" />
           <h1 className="text-xl md:text-2xl font-semibold text-foreground">
             {isVertriebler ? 'Meine Provisionen' : 'Provisionsübersicht'}
           </h1>
@@ -348,8 +348,8 @@ export function ProvisionsrechnerView() {
         <Card>
           <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
             <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 bg-primary/10 rounded-lg">
-                <Euro className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+              <div className="p-1.5 md:p-2 bg-sky-400/10 rounded-lg">
+                <Euro className="h-4 w-4 md:h-5 md:w-5 text-sky-400" />
               </div>
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Umsatz (30% Gebühr)</p>
@@ -362,8 +362,8 @@ export function ProvisionsrechnerView() {
         <Card>
           <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
             <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 bg-primary/10 rounded-lg">
-                <Users className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+              <div className="p-1.5 md:p-2 bg-emerald-400/10 rounded-lg">
+                <Users className="h-4 w-4 md:h-5 md:w-5 text-emerald-400" />
               </div>
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Provisionen</p>
@@ -423,8 +423,8 @@ export function ProvisionsrechnerView() {
                   <div key={partner.partnerCode} className="border border-border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-bold text-primary">
+                        <div className="w-10 h-10 bg-sky-400/20 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-bold text-sky-400">
                             {partner.partnerCode.substring(0, 2)}
                           </span>
                         </div>
@@ -440,7 +440,7 @@ export function ProvisionsrechnerView() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold text-primary">
+                        <p className="text-xl font-bold text-emerald-400">
                           {partner.totalProvision.toFixed(2)} €
                         </p>
                         <p className="text-sm text-muted-foreground">
@@ -460,7 +460,7 @@ export function ProvisionsrechnerView() {
                               <span className="text-muted-foreground">
                                 {((folder.prognose_amount || 0) * 0.3).toFixed(2)} € Gebühr
                               </span>
-                              <span className="text-primary font-medium">
+                              <span className="text-emerald-400 font-medium">
                                 → {calculateProvision(partner.partnerCode, (folder.prognose_amount || 0) * 0.3).toFixed(2)} €
                               </span>
                             </div>
