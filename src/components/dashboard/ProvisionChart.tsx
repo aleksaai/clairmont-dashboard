@@ -63,14 +63,15 @@ export function ProvisionChart({ configMap }: ProvisionChartProps) {
       const kunden = monthFolders.length;
 
       monthFolders.forEach(f => {
-        const amount = (f.prognose_amount || 0) * 0.3;
+        const rawAmount = f.prognose_amount || 0;
+        const amount = rawAmount * 0.3;
         umsatz += amount;
 
         const code = f.partner_code?.toUpperCase() || '';
         const config = configMap[code] || configMap['DEFAULT'];
         if (config) {
           provisionen += config.provision_type === 'percentage'
-            ? amount * (config.provision_value / 100)
+            ? rawAmount * (config.provision_value / 100)
             : config.provision_value;
         }
       });
