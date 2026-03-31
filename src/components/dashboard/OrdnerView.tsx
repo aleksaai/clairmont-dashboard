@@ -277,6 +277,9 @@ export function OrdnerView() {
   };
 
   const updateStatus = async (folderId: string, newStatus: CaseStatus) => {
+    // Find the folder to get partner_code and customer_name before updating
+    const folder = folders.find(f => f.id === folderId);
+    
     const { error } = await supabase
       .from('folders')
       .update({ status: newStatus })
@@ -285,6 +288,18 @@ export function OrdnerView() {
     if (error) {
       toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
     } else {
+      // Notify Vertriebler about status change
+      if (folder?.partner_code) {
+        supabase.functions.invoke('notify-vertriebler', {
+          body: {
+            type: 'status_change',
+            partnerCode: folder.partner_code,
+            customerName: folder.customer_name,
+            newStatus: newStatus,
+          },
+        }).catch(err => console.error('Failed to notify Vertriebler:', err));
+      }
+      
       fetchFolders();
       if (selectedFolder?.id === folderId) {
         setSelectedFolder({ ...selectedFolder, status: newStatus });
