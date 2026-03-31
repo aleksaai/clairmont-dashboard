@@ -423,8 +423,8 @@ export function ProvisionsrechnerView() {
                   <div key={partner.partnerCode} className="border border-border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-bold text-primary">
+                        <div className="w-10 h-10 bg-sky-400/20 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-bold text-sky-400">
                             {partner.partnerCode.substring(0, 2)}
                           </span>
                         </div>
