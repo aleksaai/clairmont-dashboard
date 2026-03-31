@@ -278,7 +278,7 @@ export function ProvisionsrechnerView() {
       
       const rawAmount = folder.prognose_amount || 0;
       const amount = rawAmount * 0.3; // 30% Beratungsgebühr = unser Umsatz
-      const provision = calculateProvision(code, amount); // Provision basiert auf 30% Beratungsgebühr
+      const provision = calculateProvision(code, rawAmount); // Provision basiert auf volle Erstattung
       const bookkeeper = getBookkeeperFee(code);
       
       if (!grouped[code]) {
