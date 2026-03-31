@@ -68,9 +68,10 @@ export function ProvisionChart({ configMap }: ProvisionChartProps) {
 
         const code = f.partner_code?.toUpperCase() || '';
         const config = configMap[code] || configMap['DEFAULT'];
+        const fullAmount = f.prognose_amount || 0; // Provision basiert auf vollem Erstattungsbetrag
         if (config) {
           provisionen += config.provision_type === 'percentage'
-            ? amount * (config.provision_value / 100)
+            ? fullAmount * (config.provision_value / 100)
             : config.provision_value;
         }
       });
