@@ -36,7 +36,7 @@ export function UserAvatar({ avatarUrl, fullName, size = 'md', className }: User
           className="object-cover"
         />
       )}
-      <AvatarFallback className="bg-primary/10 text-primary">
+      <AvatarFallback className="bg-sky-400/15 text-sky-400">
         {initials || <User className="h-4 w-4" />}
       </AvatarFallback>
     </Avatar>
