@@ -440,7 +440,7 @@ export function ProvisionsrechnerView() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold text-primary">
+                        <p className="text-xl font-bold text-emerald-400">
                           {partner.totalProvision.toFixed(2)} €
                         </p>
                         <p className="text-sm text-muted-foreground">
