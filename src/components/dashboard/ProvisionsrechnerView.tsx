@@ -33,8 +33,9 @@ function getMonthOptions() {
 }
 
 export function ProvisionsrechnerView() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const isAdmin = role === 'admin';
+  const isVertriebler = role === 'vertriebler';
   const queryClient = useQueryClient();
   
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
