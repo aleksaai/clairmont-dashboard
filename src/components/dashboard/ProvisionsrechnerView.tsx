@@ -544,8 +544,10 @@ export function ProvisionsrechnerView() {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
+      {/* Edit/Create Dialog - nur für Admins */}
+      {isAdmin && (
       {/* Edit/Create Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
