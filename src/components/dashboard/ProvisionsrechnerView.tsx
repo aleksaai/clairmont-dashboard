@@ -402,6 +402,9 @@ export function ProvisionsrechnerView() {
         </Card>
       </div>
 
+      {/* Chart - nur für Admins */}
+      {isAdmin && <ProvisionChart configMap={configMap} />}
+
       {/* Provisionen nach Partner */}
       <Card>
         <CardHeader>
