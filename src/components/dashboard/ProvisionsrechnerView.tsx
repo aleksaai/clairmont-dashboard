@@ -548,77 +548,77 @@ export function ProvisionsrechnerView() {
 
       {/* Edit/Create Dialog - nur für Admins */}
       {isAdmin && (
-      {/* Edit/Create Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingConfig ? 'Provisionskonfiguration bearbeiten' : 'Neue Provisionskonfiguration'}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Partnercode</label>
-              <Input
-                value={formData.partner_code}
-                onChange={(e) => setFormData({ ...formData, partner_code: e.target.value })}
-                placeholder="z.B. AB-CD"
-              />
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingConfig ? 'Provisionskonfiguration bearbeiten' : 'Neue Provisionskonfiguration'}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Partnercode</label>
+                <Input
+                  value={formData.partner_code}
+                  onChange={(e) => setFormData({ ...formData, partner_code: e.target.value })}
+                  placeholder="z.B. AB-CD"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Provisionstyp</label>
+                <Select
+                  value={formData.provision_type}
+                  onValueChange={(v) => setFormData({ ...formData, provision_type: v as 'fixed' | 'percentage' })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Prozent (%)</SelectItem>
+                    <SelectItem value="fixed">Fix (€)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {formData.provision_type === 'percentage' ? 'Provision (%)' : 'Provision (€)'}
+                </label>
+                <Input
+                  type="number"
+                  value={formData.provision_value}
+                  onChange={(e) => setFormData({ ...formData, provision_value: parseFloat(e.target.value) || 0 })}
+                  min={0}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sachbearbeitergebühr (€)</label>
+                <Input
+                  type="number"
+                  value={formData.bookkeeper_fee}
+                  onChange={(e) => setFormData({ ...formData, bookkeeper_fee: parseFloat(e.target.value) || 0 })}
+                  min={0}
+                />
+              </div>
             </div>
             
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Provisionstyp</label>
-              <Select
-                value={formData.provision_type}
-                onValueChange={(v) => setFormData({ ...formData, provision_type: v as 'fixed' | 'percentage' })}
+            <DialogFooter>
+              <Button variant="outline" onClick={closeDialog}>
+                Abbrechen
+              </Button>
+              <Button 
+                onClick={handleSubmit}
+                disabled={createConfigMutation.isPending || updateConfigMutation.isPending}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="percentage">Prozent (%)</SelectItem>
-                  <SelectItem value="fixed">Fix (€)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                {formData.provision_type === 'percentage' ? 'Provision (%)' : 'Provision (€)'}
-              </label>
-              <Input
-                type="number"
-                value={formData.provision_value}
-                onChange={(e) => setFormData({ ...formData, provision_value: parseFloat(e.target.value) || 0 })}
-                min={0}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sachbearbeitergebühr (€)</label>
-              <Input
-                type="number"
-                value={formData.bookkeeper_fee}
-                onChange={(e) => setFormData({ ...formData, bookkeeper_fee: parseFloat(e.target.value) || 0 })}
-                min={0}
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>
-              Abbrechen
-            </Button>
-            <Button 
-              onClick={handleSubmit}
-              disabled={createConfigMutation.isPending || updateConfigMutation.isPending}
-            >
-              {editingConfig ? 'Speichern' : 'Erstellen'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                {editingConfig ? 'Speichern' : 'Erstellen'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
