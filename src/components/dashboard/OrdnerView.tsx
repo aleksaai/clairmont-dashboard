@@ -232,6 +232,18 @@ export function OrdnerView() {
       setSelectedFolder({ ...selectedFolder, partner_code: newCode });
       setFolders(prev => prev.map(f => f.id === selectedFolder.id ? { ...f, partner_code: newCode } : f));
       toast({ title: 'Partnercode aktualisiert' });
+      
+      // Notify Vertriebler if a new partner code was assigned
+      if (newCode) {
+        supabase.functions.invoke('notify-vertriebler', {
+          body: {
+            type: 'new_customer',
+            partnerCode: newCode,
+            customerName: selectedFolder.customer_name,
+            productType: selectedFolder.product,
+          },
+        }).catch(err => console.error('Failed to notify Vertriebler:', err));
+      }
     }
     setIsEditingPartnerCode(false);
   };
@@ -268,6 +280,19 @@ export function OrdnerView() {
       toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Ordner erstellt', description: folderName });
+      
+      // Notify Vertriebler if partner code was set
+      if (partnerCode?.trim()) {
+        supabase.functions.invoke('notify-vertriebler', {
+          body: {
+            type: 'new_customer',
+            partnerCode: partnerCode.trim(),
+            customerName: customerName,
+            productType: selectedProduct,
+          },
+        }).catch(err => console.error('Failed to notify Vertriebler:', err));
+      }
+      
       setIsCreateOpen(false);
       setCustomerName('');
       setCustomerEmail('');
