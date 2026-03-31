@@ -11,6 +11,7 @@ import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { ProvisionChart } from './ProvisionChart';
 
 interface ProvisionConfig {
   id: string;
