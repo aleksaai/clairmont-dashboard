@@ -472,8 +472,8 @@ export function ProvisionsrechnerView() {
         </CardContent>
       </Card>
 
-      {/* Provisionsübersicht alle Partner */}
-      <Card>
+      {/* Provisionsübersicht alle Partner - nur für Admins */}
+      {isAdmin && <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Provisionsübersicht alle Partner</CardTitle>
           {isAdmin && (
