@@ -1,23 +1,31 @@
 
 
-# Plan: Vertriebler-Benachrichtigung bei manuellem Ordner-Erstellen & Partnercode-Zuweisung
+# Plan: Provisionsberechnung zurücksetzen auf 30%-Basis
 
 ## Problem
 
-Vertriebler werden nur benachrichtigt, wenn ein Kunde über die externen Webhooks (Formular) reinkommt. Zwei Fälle fehlen:
-
-1. Admin erstellt manuell einen Ordner mit Partnercode im Dashboard
-2. Admin weist nachträglich einen Partnercode zu einem bestehenden Ordner zu
+Die letzte Änderung hat die Provisionsbasis von 30% (Beratungsgebühr) auf 100% (volle Erstattung) umgestellt. Die Provisionssätze in der Datenbank waren aber offensichtlich bereits auf die 30%-Basis kalibriert, weshalb die Zahlen jetzt ~3,33× zu hoch sind.
 
 ## Lösung
 
-### Datei: `src/components/dashboard/OrdnerView.tsx`
+Die Provisionsberechnung in beiden Dateien zurück auf die 30%-Basis setzen:
 
-**1. Nach `createFolder`** (ca. Zeile 270): Nach erfolgreichem Insert, wenn `partnerCode` gesetzt ist, `notify-vertriebler` mit `type: 'new_customer'` aufrufen.
+### Datei 1: `src/components/dashboard/ProvisionsrechnerView.tsx`
 
-**2. Nach `savePartnerCode`** (ca. Zeile 227): Nach erfolgreichem Update, wenn der neue Partnercode nicht leer ist, `notify-vertriebler` mit `type: 'new_customer'` aufrufen -- damit der neu zugewiesene Vertriebler informiert wird.
+**Zeile 281** ändern:
+```typescript
+// Aktuell (falsch):
+const provision = calculateProvision(code, rawAmount);
 
-### Keine weiteren Änderungen nötig
+// Korrektur:
+const provision = calculateProvision(code, amount); // amount = rawAmount * 0.3
+```
 
-Die `notify-vertriebler` Edge Function unterstützt bereits den `new_customer`-Typ mit Partnercode-Lookup. Es muss nur im Frontend an den zwei Stellen der Aufruf ergänzt werden.
+### Datei 2: `src/components/dashboard/ProvisionChart.tsx`
+
+**Zeilen 69-75** ändern: `fullAmount` durch `amount` ersetzen, sodass die Provision wieder auf Basis der 30%-Gebühr berechnet wird.
+
+### Keine Datenbankänderungen nötig
+
+Reine Frontend-Korrektur in zwei Dateien.
 
