@@ -11,6 +11,7 @@ import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { ProvisionChart } from './ProvisionChart';
 
 interface ProvisionConfig {
   id: string;
@@ -400,6 +401,9 @@ export function ProvisionsrechnerView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Chart - nur für Admins */}
+      {isAdmin && <ProvisionChart configMap={configMap} />}
 
       {/* Provisionen nach Partner */}
       <Card>
