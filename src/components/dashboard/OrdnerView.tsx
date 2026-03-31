@@ -268,6 +268,19 @@ export function OrdnerView() {
       toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Ordner erstellt', description: folderName });
+      
+      // Notify Vertriebler if partner code was set
+      if (partnerCode?.trim()) {
+        supabase.functions.invoke('notify-vertriebler', {
+          body: {
+            type: 'new_customer',
+            partnerCode: partnerCode.trim(),
+            customerName: customerName,
+            productType: selectedProduct,
+          },
+        }).catch(err => console.error('Failed to notify Vertriebler:', err));
+      }
+      
       setIsCreateOpen(false);
       setCustomerName('');
       setCustomerEmail('');
