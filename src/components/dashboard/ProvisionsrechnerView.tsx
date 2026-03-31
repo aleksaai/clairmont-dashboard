@@ -362,8 +362,8 @@ export function ProvisionsrechnerView() {
         <Card>
           <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
             <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 bg-primary/10 rounded-lg">
-                <Users className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+              <div className="p-1.5 md:p-2 bg-emerald-400/10 rounded-lg">
+                <Users className="h-4 w-4 md:h-5 md:w-5 text-emerald-400" />
               </div>
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Provisionen</p>
