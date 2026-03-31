@@ -33,8 +33,9 @@ function getMonthOptions() {
 }
 
 export function ProvisionsrechnerView() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const isAdmin = role === 'admin';
+  const isVertriebler = role === 'vertriebler';
   const queryClient = useQueryClient();
   
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
@@ -49,6 +50,21 @@ export function ProvisionsrechnerView() {
   
   const monthStart = startOfMonth(new Date(selectedMonth + '-01'));
   const monthEnd = endOfMonth(monthStart);
+
+  // Fetch Vertriebler's own partner codes
+  const { data: myPartnerCodes } = useQuery({
+    queryKey: ['my-partner-codes', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('partner_codes')
+        .select('code')
+        .eq('user_id', user.id);
+      if (error) throw error;
+      return data?.map(p => p.code.toUpperCase()) || [];
+    },
+    enabled: isVertriebler && !!user?.id,
+  });
 
   // Fetch provision configs from database
   const { data: provisionConfigs, isLoading: configsLoading } = useQuery({
@@ -66,9 +82,9 @@ export function ProvisionsrechnerView() {
 
   // Fetch all paid folders for the selected month
   const { data: paidFolders, isLoading: foldersLoading } = useQuery({
-    queryKey: ['paid-folders-provisions', selectedMonth],
+    queryKey: ['paid-folders-provisions', selectedMonth, myPartnerCodes],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('folders')
         .select('id, name, customer_name, partner_code, prognose_amount, updated_at, status')
         .eq('status', 'bezahlt')
@@ -76,9 +92,16 @@ export function ProvisionsrechnerView() {
         .gte('updated_at', monthStart.toISOString())
         .lte('updated_at', monthEnd.toISOString());
       
+      // Vertriebler only see their own partner code folders
+      if (isVertriebler && myPartnerCodes && myPartnerCodes.length > 0) {
+        query = query.in('partner_code', myPartnerCodes);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
+    enabled: isAdmin || (isVertriebler && !!myPartnerCodes),
   });
 
   // Create config lookup map
@@ -297,7 +320,9 @@ export function ProvisionsrechnerView() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Calculator className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-          <h1 className="text-xl md:text-2xl font-semibold text-foreground">Provisionsübersicht</h1>
+          <h1 className="text-xl md:text-2xl font-semibold text-foreground">
+            {isVertriebler ? 'Meine Provisionen' : 'Provisionsübersicht'}
+          </h1>
         </div>
         
         <div className="flex items-center gap-2">
@@ -447,8 +472,8 @@ export function ProvisionsrechnerView() {
         </CardContent>
       </Card>
 
-      {/* Provisionsübersicht alle Partner */}
-      <Card>
+      {/* Provisionsübersicht alle Partner - nur für Admins */}
+      {isAdmin && <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Provisionsübersicht alle Partner</CardTitle>
           {isAdmin && (
@@ -519,79 +544,81 @@ export function ProvisionsrechnerView() {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
-      {/* Edit/Create Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingConfig ? 'Provisionskonfiguration bearbeiten' : 'Neue Provisionskonfiguration'}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Partnercode</label>
-              <Input
-                value={formData.partner_code}
-                onChange={(e) => setFormData({ ...formData, partner_code: e.target.value })}
-                placeholder="z.B. AB-CD"
-              />
+      {/* Edit/Create Dialog - nur für Admins */}
+      {isAdmin && (
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingConfig ? 'Provisionskonfiguration bearbeiten' : 'Neue Provisionskonfiguration'}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Partnercode</label>
+                <Input
+                  value={formData.partner_code}
+                  onChange={(e) => setFormData({ ...formData, partner_code: e.target.value })}
+                  placeholder="z.B. AB-CD"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Provisionstyp</label>
+                <Select
+                  value={formData.provision_type}
+                  onValueChange={(v) => setFormData({ ...formData, provision_type: v as 'fixed' | 'percentage' })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Prozent (%)</SelectItem>
+                    <SelectItem value="fixed">Fix (€)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {formData.provision_type === 'percentage' ? 'Provision (%)' : 'Provision (€)'}
+                </label>
+                <Input
+                  type="number"
+                  value={formData.provision_value}
+                  onChange={(e) => setFormData({ ...formData, provision_value: parseFloat(e.target.value) || 0 })}
+                  min={0}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sachbearbeitergebühr (€)</label>
+                <Input
+                  type="number"
+                  value={formData.bookkeeper_fee}
+                  onChange={(e) => setFormData({ ...formData, bookkeeper_fee: parseFloat(e.target.value) || 0 })}
+                  min={0}
+                />
+              </div>
             </div>
             
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Provisionstyp</label>
-              <Select
-                value={formData.provision_type}
-                onValueChange={(v) => setFormData({ ...formData, provision_type: v as 'fixed' | 'percentage' })}
+            <DialogFooter>
+              <Button variant="outline" onClick={closeDialog}>
+                Abbrechen
+              </Button>
+              <Button 
+                onClick={handleSubmit}
+                disabled={createConfigMutation.isPending || updateConfigMutation.isPending}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="percentage">Prozent (%)</SelectItem>
-                  <SelectItem value="fixed">Fix (€)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                {formData.provision_type === 'percentage' ? 'Provision (%)' : 'Provision (€)'}
-              </label>
-              <Input
-                type="number"
-                value={formData.provision_value}
-                onChange={(e) => setFormData({ ...formData, provision_value: parseFloat(e.target.value) || 0 })}
-                min={0}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sachbearbeitergebühr (€)</label>
-              <Input
-                type="number"
-                value={formData.bookkeeper_fee}
-                onChange={(e) => setFormData({ ...formData, bookkeeper_fee: parseFloat(e.target.value) || 0 })}
-                min={0}
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>
-              Abbrechen
-            </Button>
-            <Button 
-              onClick={handleSubmit}
-              disabled={createConfigMutation.isPending || updateConfigMutation.isPending}
-            >
-              {editingConfig ? 'Speichern' : 'Erstellen'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                {editingConfig ? 'Speichern' : 'Erstellen'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
