@@ -43,6 +43,7 @@ export function ProvisionsrechnerView() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<ProvisionConfig | null>(null);
+  const [completedPayouts, setCompletedPayouts] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     partner_code: '',
     provision_type: 'percentage' as 'fixed' | 'percentage',
