@@ -91,7 +91,11 @@ export function MobileMenu({
         {/* Navigation */}
         <nav className="p-2">
           {navItems
-            .filter((item) => !item.adminOnly || userRole === 'admin')
+            .filter((item) => {
+              if (item.roles) return item.roles.includes(userRole || '');
+              if (item.adminOnly) return userRole === 'admin';
+              return true;
+            })
             .map((item) => (
               <button
                 key={item.id}

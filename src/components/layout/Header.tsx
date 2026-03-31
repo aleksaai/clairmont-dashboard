@@ -67,7 +67,11 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
           {navItems
-            .filter((item) => !item.adminOnly || userRole === 'admin')
+            .filter((item) => {
+              if (item.roles) return item.roles.includes(userRole || '');
+              if (item.adminOnly) return userRole === 'admin';
+              return true;
+            })
             .map((item) => (
               <button
                 key={item.id}
