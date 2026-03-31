@@ -124,24 +124,24 @@ export function ProvisionChart({ configMap }: ProvisionChartProps) {
               <XAxis dataKey="name" className="text-xs fill-muted-foreground" tick={{ fontSize: 12 }} />
               <YAxis className="text-xs fill-muted-foreground" tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="umsatz" name="Umsatz" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} opacity={0.3} />
-              <Bar dataKey="provisionen" name="Provisionen" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              <Line dataKey="kunden" name="Kunden" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={{ r: 3 }} yAxisId={1} />
+              <Bar dataKey="umsatz" name="Umsatz" fill="#60a5fa" radius={[4, 4, 0, 0]} opacity={0.5} />
+              <Bar dataKey="provisionen" name="Provisionen" fill="#38bdf8" radius={[4, 4, 0, 0]} />
+              <Line dataKey="kunden" name="Kunden" stroke="#a78bfa" strokeWidth={2} dot={{ r: 3 }} yAxisId={1} />
               <YAxis yAxisId={1} orientation="right" tick={{ fontSize: 12 }} className="text-xs fill-muted-foreground" />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
         <div className="flex items-center justify-center gap-6 mt-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-primary/30" />
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#60a5fa', opacity: 0.5 }} />
             <span className="text-muted-foreground">Umsatz (30% Gebühr)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-primary" />
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#38bdf8' }} />
             <span className="text-muted-foreground">Provisionen</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-muted-foreground" />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#a78bfa' }} />
             <span className="text-muted-foreground">Kunden</span>
           </div>
         </div>
