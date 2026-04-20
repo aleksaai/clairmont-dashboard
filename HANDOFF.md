@@ -4,7 +4,24 @@
 
 ## Wo wir aktuell stehen
 
-**Phase 1 von 7** (Prep & Access) — Marcus wartet auf Aleksa.
+**Phase 0 (Daten-Export) — Tool ist gebaut, wartet auf Aleksa's Ausführung.**
+
+Aleksa's Entscheidung 2026-04-20: KEINE Aktion in Lovable (keine Edge Function da deployen, nichts im Lovable-Chat pasten). Beide Repos wurden von Lovable disconnected. Pg_dump ist unmöglich weil Lovable die Service-Role-Credentials nicht rausrückt. **Neue Strategie:** lokales Admin-Export-Tool im Dashboard-Repo (Route `/migration-export`) — läuft lokal mit Aleksa's Admin-Session, exportiert alle Daten als JSON.
+
+## Was Aleksa jetzt tun muss
+
+```bash
+cd ~/Desktop/Projects/clairmont-dashboard
+npm run dev     # startet Vite auf http://localhost:8080
+```
+
+Dann im Browser:
+1. http://localhost:8080 öffnen
+2. Als Admin einloggen (die bestehende Admin-Email + Passwort aus dem Lovable-Dashboard)
+3. Navigieren zu http://localhost:8080/migration-export
+4. "Export starten" klicken — das Tool zieht alle 8 Tabellen + Signed-URLs für alle 4 Storage-Buckets (30 Tage gültig)
+5. JSON-Download geht automatisch
+6. Datei an Marcus weitergeben (Dateigröße sollte klein sein, wenige MB — weil nur Signed-URLs, keine Base64-Blobs)
 
 ## Was schon passiert ist
 
@@ -20,12 +37,15 @@
 
 ## Was gerade blockiert
 
-**Aleksa muss liefern (Phase 1):**
-- Lovable-Dashboard-Supabase **Service-Role-Key** (Lovable → Settings → API → Project API keys)
-- Lovable-Dashboard-Supabase **Database Password** (Lovable → Settings → Database → Connection String → "URI" enthält das Passwort, oder "Reset database password")
-- **Stripe-Dashboard-Zugang** (für Phase 4 Webhook-Umstellung)
-- **Resend-API-Key** (für Email-Versand-Secrets in Phase 2)
-- **DNS-Zugang** für die Clairmont-Domain (Phase 6 Cutover)
+**Aleksa muss das Export-Tool laufen lassen (siehe oben).** Sobald das JSON bei Marcus ist:
+- Marcus parst JSON + downloadet Storage-Files via Signed-URLs
+- Phase 2 läuft (Schema deployen auf Clairmont Advisory)
+- Phase 3 läuft (Import der Daten mit UUID-Preservation)
+
+**Später (für Phase 4+):**
+- Stripe-Webhook-Umstellung: muss Clairmont selbst machen (ihr Stripe-Account)
+- DNS-Zugang für die Clairmont-Domain: Phase 6 Cutover
+- Secrets die Marcus nicht aus dem Export ziehen kann (`RESEND_API_KEY`, `FORM_WEBHOOK_SECRET`, `INSURANCE_WEBHOOK_SECRET`, `CREDIT_WEBHOOK_SECRET`, `LOVABLE_API_KEY`-Ersatz) — Aleksa kennt die aus Lovable-Dashboard → Edge Function Settings
 
 ## Was als nächstes kommt (sobald Phase 1 durch)
 
