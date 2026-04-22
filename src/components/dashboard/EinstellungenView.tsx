@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,9 +25,9 @@ const getInitials = (name: string | null) => {
 
 export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onProfileUpdate }: EinstellungenViewProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [newEmail, setNewEmail] = useState(userEmail || '');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const handleEmailUpdate = async () => {
     if (!newEmail || newEmail === userEmail) return;
@@ -52,30 +53,8 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onPr
     }
   };
 
-  const handlePasswordReset = async () => {
-    if (!userEmail) return;
-    
-    setIsResettingPassword(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: `${window.location.origin}/auth`,
-      });
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'E-Mail gesendet',
-        description: 'Bitte prüfen Sie Ihre E-Mails für den Link zum Zurücksetzen des Passworts.',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Fehler',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsResettingPassword(false);
-    }
+  const handleChangePassword = () => {
+    navigate('/reset-password');
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,19 +164,18 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onPr
         </div>
       </div>
 
-      {/* Password Reset */}
+      {/* Password Change */}
       <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-3">
         <p className="text-sm font-medium text-foreground">Passwort</p>
         <p className="text-xs text-muted-foreground mb-2">
-          Wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.
+          Ändere dein Passwort direkt — neues Passwort setzen und bestätigen.
         </p>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="sm"
-          onClick={handlePasswordReset}
-          disabled={isResettingPassword}
+          onClick={handleChangePassword}
         >
-          {isResettingPassword ? 'Wird gesendet...' : 'Passwort zurücksetzen'}
+          Passwort ändern
         </Button>
       </div>
     </div>
