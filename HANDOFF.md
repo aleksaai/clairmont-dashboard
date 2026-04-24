@@ -1,7 +1,7 @@
 # HANDOFF — clairmont-dashboard
 
-**Letzte Aktualisierung:** 2026-04-20 (Marcus, Migration abgeschlossen)
-**Status:** 🟢 **LIVE**
+**Letzte Aktualisierung:** 2026-04-24 (Marcus, Post-Go-Live-Support + Forgot-Password)
+**Status:** 🟢 **LIVE + laufender Support**
 
 ## Wo das Projekt steht
 
@@ -47,13 +47,24 @@ npm run dev    # Vite auf http://localhost:8080
 | `invite-user` | Admin-only User-Einladung | `RESEND_API_KEY` |
 | `delete-user` | Admin-only User-Löschung | — |
 
+## Post-Go-Live Änderungen (2026-04-22 bis 2026-04-24)
+
+| Datum | Thema | Was geändert |
+|---|---|---|
+| 2026-04-22 | Admin-Invite-User 401 | `invite-user` + `delete-user` redeployed mit `verify_jwt: false` (ES256-Bug, siehe claude-team knowledge.md §18) + `apikey`-Header in `TeamView.tsx` |
+| 2026-04-24 | Provisionsrechner-Zahlen falsch | 3 Fixes: (a) `normalizeCode()` Helper in `ProvisionsrechnerView.tsx` (strip `*`, trim, upper) für Partner-Code-Varianten wie `*ALPHA*`/`Alpha `; (b) DB-Reparatur: 49 `updated_at` Werte aus Lovable-CSV via Bulk-UPDATE wiederhergestellt (Trigger disable+enable); (c) Delta 1.614 € in Apr = 1 Folder (Maximilian Charl) steht als `prognose_erstellt` statt `bezahlt` — Aleksas Business-Entscheid |
+| 2026-04-24 | Self-Service Passwort-Reset | `Auth.tsx` um Inline-"Passwort vergessen?"-Mode erweitert, `useAuth.ts` um `resetPassword()` Helper. Kein Backend-Change — nutzt bestehenden `/reset-password` Flow |
+
+**Offenes Thema:** Provisions-Seite filtert nach `updated_at` — volatiles Feld, wird bei jedem Status-Wechsel/Notiz-Edit überschrieben. Langfrist-Lösung: dediziertes `paid_at` Feld, gesetzt vom Stripe-Webhook bei Status → `bezahlt`. Roadmap, nicht akut.
+
 ## Optional noch offen
 
-1. **Lovable archivieren** — wenn 24-48h stabil gelaufen ist: Lovable-Projekt `ixefmjnjjwntwibkytis` offline, Abo künigen
+1. **Lovable archivieren** — wenn 24-48h stabil gelaufen ist: Lovable-Projekt `ixefmjnjjwntwibkytis` offline, Abo künigen. **⚠ Erst nach Maximilian-Charl-Klärung** (Lovables Snapshot hatte den Folder als `bezahlt` + 5.380 €, unser DB hat ihn als `prognose_erstellt` + NULL)
 2. **`.env`-Cleanup** — committed File raus, `.env.example` als Template
 3. **`lovable-tagger`** in `package.json` devDeps + `.lovable/` Folder entfernen (kosmetisch)
 4. **Supabase Auth URL-Config** — Site URL + Redirect URLs auf Prod-Domain setzen (nicht nur localhost), damit Password-Reset-Mails korrekt funktionieren
 5. **DSGVO-Audit** — aktuell gehen Tax-Daten als Email-Inhalte raus → eventuell Signed-Link-Pattern
+6. **`paid_at`-Feld** in `folders` einführen (siehe "Offenes Thema" oben)
 
 ## Kontext-Switch für frische Claude-Code-Session
 
