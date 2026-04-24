@@ -22,6 +22,13 @@ interface ProvisionConfig {
   bookkeeper_fee: number;
 }
 
+// Normalize partner code for lookup: strip *, trim whitespace, uppercase.
+// Historische Daten haben Varianten wie `*ALPHA*`, `Alpha ` (trailing space),
+// `ALPHA` — alle sollen auf dieselbe Config matchen.
+function normalizeCode(code: string | null | undefined): string {
+  return (code || '').replace(/\*/g, '').trim().toUpperCase();
+}
+
 function getMonthOptions() {
   const options = [];
   for (let i = 0; i < 12; i++) {
@@ -64,7 +71,7 @@ export function ProvisionsrechnerView() {
         .select('code')
         .eq('user_id', user.id);
       if (error) throw error;
-      return data?.map(p => p.code.toUpperCase()) || [];
+      return data?.map(p => normalizeCode(p.code)) || [];
     },
     enabled: isVertriebler && !!user?.id,
   });
@@ -87,6 +94,12 @@ export function ProvisionsrechnerView() {
   const { data: paidFolders, isLoading: foldersLoading } = useQuery({
     queryKey: ['paid-folders-provisions', selectedMonth, myPartnerCodes],
     queryFn: async () => {
+      // Monats-Grouping via updated_at = Bezahl-Monat (wenn der Status-Trigger
+      // 'bezahlt' gesetzt wurde). Semantisch korrekt für Provisionsabrechnung:
+      // das Geld fließt in diesem Monat. Achtung: `updated_at` ist volatil —
+      // manuelle Folder-Edits (Notizen, Status-Korrekturen) schieben den Folder
+      // potenziell in einen anderen Monat. Langfrist-Vorschlag: dediziertes
+      // paid_at-Feld via Stripe-Webhook setzen.
       let query = supabase
         .from('folders')
         .select('id, name, customer_name, partner_code, prognose_amount, updated_at, status')
@@ -111,14 +124,14 @@ export function ProvisionsrechnerView() {
   const configMap = useMemo(() => {
     const map: Record<string, ProvisionConfig> = {};
     provisionConfigs?.forEach(c => {
-      map[c.partner_code.toUpperCase()] = c;
+      map[normalizeCode(c.partner_code)] = c;
     });
     return map;
   }, [provisionConfigs]);
 
   // Calculate provision based on config
   const calculateProvision = (partnerCode: string, amount: number): number => {
-    const config = configMap[partnerCode.toUpperCase()];
+    const config = configMap[normalizeCode(partnerCode)];
     if (!config) {
       // Fallback to default if exists
       const defaultConfig = configMap['DEFAULT'];
@@ -139,7 +152,7 @@ export function ProvisionsrechnerView() {
 
   // Get bookkeeper fee for a partner code
   const getBookkeeperFee = (partnerCode: string): number => {
-    const config = configMap[partnerCode.toUpperCase()];
+    const config = configMap[normalizeCode(partnerCode)];
     if (!config) {
       const defaultConfig = configMap['DEFAULT'];
       return defaultConfig?.bookkeeper_fee || 130;
@@ -153,7 +166,7 @@ export function ProvisionsrechnerView() {
       const { error } = await supabase
         .from('partner_provision_configs')
         .insert({
-          partner_code: data.partner_code.toUpperCase(),
+          partner_code: normalizeCode(data.partner_code),
           provision_type: data.provision_type,
           provision_value: data.provision_value,
           bookkeeper_fee: data.bookkeeper_fee,
@@ -175,7 +188,7 @@ export function ProvisionsrechnerView() {
       const { error } = await supabase
         .from('partner_provision_configs')
         .update({
-          partner_code: data.partner_code.toUpperCase(),
+          partner_code: normalizeCode(data.partner_code),
           provision_type: data.provision_type,
           provision_value: data.provision_value,
           bookkeeper_fee: data.bookkeeper_fee,
@@ -273,7 +286,7 @@ export function ProvisionsrechnerView() {
     }> = {};
 
     paidFolders.forEach(folder => {
-      const code = folder.partner_code?.toUpperCase();
+      const code = normalizeCode(folder.partner_code);
       if (!code) return;
       
       const rawAmount = folder.prognose_amount || 0;

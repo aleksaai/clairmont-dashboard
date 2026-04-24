@@ -128,6 +128,18 @@ export function useAuth() {
     return { error };
   };
 
+  // Sendet einen Passwort-Zurücksetzen-Link an die angegebene Email.
+  // Supabase gibt bewusst KEINEN Fehler zurück wenn die Email nicht existiert
+  // (Security: verhindert Email-Enumeration). Das UI zeigt deshalb immer
+  // dieselbe Success-Message — egal ob Email existiert oder nicht.
+  const resetPassword = async (email: string) => {
+    const redirectUrl = `${window.location.origin}/reset-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
+    return { error };
+  };
+
   return {
     user: state.user,
     session: state.session,
@@ -137,6 +149,7 @@ export function useAuth() {
     signIn,
     signUp,
     signOut,
+    resetPassword,
     refreshProfile,
   };
 }
