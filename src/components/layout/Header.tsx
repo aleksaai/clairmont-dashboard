@@ -9,6 +9,7 @@ import {
 import { Settings, LogOut } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { MobileMenu } from './MobileMenu';
+import { SearchBar } from './SearchBar';
 
 interface HeaderProps {
   userName: string | null;
@@ -16,6 +17,7 @@ interface HeaderProps {
   avatarUrl?: string | null;
   activeSection: string;
   onSectionChange: (section: string) => void;
+  onNavigate: (section: string, context?: { folderId?: string; userId?: string }) => void;
   onSignOut: () => void;
   unreadMessageCount?: number;
 }
@@ -50,7 +52,7 @@ const getInitials = (name: string | null) => {
   return name.substring(0, 2).toUpperCase();
 };
 
-export function Header({ userName, userRole, avatarUrl, activeSection, onSectionChange, onSignOut, unreadMessageCount = 0 }: HeaderProps) {
+export function Header({ userName, userRole, avatarUrl, activeSection, onSectionChange, onNavigate, onSignOut, unreadMessageCount = 0 }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -101,13 +103,9 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
         </button>
       </div>
 
-      {/* Center: Search — glass input style */}
+      {/* Center: Search */}
       <div className="hidden lg:flex flex-1 justify-center px-8">
-        <input
-          type="text"
-          placeholder="Suchen..."
-          className="glass-input px-4 py-1.5 text-sm text-foreground placeholder:text-muted-foreground w-80 focus:outline-none"
-        />
+        <SearchBar onNavigate={onNavigate} />
       </div>
 
       {/* Spacer for desktop without search */}

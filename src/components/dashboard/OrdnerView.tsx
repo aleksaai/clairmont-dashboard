@@ -164,7 +164,12 @@ const getFileIcon = (fileType: string | null) => {
   return { Icon: File, color: 'text-muted-foreground' };
 };
 
-export function OrdnerView() {
+interface OrdnerViewProps {
+  searchFolderId?: string;
+  onSearchConsumed?: () => void;
+}
+
+export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps) {
   const { user, role } = useAuth();
   const { toast } = useToast();
   
@@ -197,6 +202,18 @@ export function OrdnerView() {
   useEffect(() => {
     fetchFolders();
   }, []);
+
+  useEffect(() => {
+    if (searchFolderId && folders.length > 0) {
+      const target = folders.find(f => f.id === searchFolderId);
+      if (target) {
+        setSelectedProduct(target.product);
+        setSelectedStatus(null);
+        setSelectedFolder(target);
+        onSearchConsumed?.();
+      }
+    }
+  }, [searchFolderId, folders]);
 
   useEffect(() => {
     if (selectedFolder) {

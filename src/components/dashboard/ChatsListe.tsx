@@ -41,7 +41,12 @@ interface Message {
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-export function ChatsListe() {
+interface ChatsListeProps {
+  searchUserId?: string;
+  onSearchConsumed?: () => void;
+}
+
+export function ChatsListe({ searchUserId, onSearchConsumed }: ChatsListeProps = {}) {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [users, setUsers] = useState<ChatUser[]>([]);
@@ -170,6 +175,16 @@ export function ChatsListe() {
 
     fetchUsers();
   }, [user]);
+
+  useEffect(() => {
+    if (searchUserId && users.length > 0) {
+      const target = users.find(u => u.id === searchUserId);
+      if (target) {
+        setSelectedUser(target);
+        onSearchConsumed?.();
+      }
+    }
+  }, [searchUserId, users]);
 
   // Fetch messages when user is selected
   useEffect(() => {

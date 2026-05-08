@@ -16,7 +16,13 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeSection, setActiveSection] = useState('ordner');
+  const [searchContext, setSearchContext] = useState<{ folderId?: string; userId?: string } | null>(null);
   const { unreadCount } = useMessageNotifications(user?.id);
+
+  const handleNavigate = (section: string, context?: { folderId?: string; userId?: string }) => {
+    setSearchContext(context || null);
+    setActiveSection(section);
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -48,9 +54,9 @@ export default function Dashboard() {
   const renderContent = () => {
     switch (activeSection) {
       case 'ordner':
-        return <OrdnerView />;
+        return <OrdnerView searchFolderId={searchContext?.folderId} onSearchConsumed={() => setSearchContext(null)} />;
       case 'chats':
-        return <ChatsListe />;
+        return <ChatsListe searchUserId={searchContext?.userId} onSearchConsumed={() => setSearchContext(null)} />;
       case 'team':
         return <TeamView />;
       case 'kb':
@@ -81,6 +87,7 @@ export default function Dashboard() {
         avatarUrl={profile?.avatar_url}
         activeSection={activeSection}
         onSectionChange={setActiveSection}
+        onNavigate={handleNavigate}
         onSignOut={handleSignOut}
         unreadMessageCount={unreadCount}
       />
