@@ -54,18 +54,18 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-3 md:px-6">
-      {/* Left: Logo + Navigation (Desktop) / Empty space for centering (Mobile) */}
-      <div className="hidden md:flex items-center gap-4 md:gap-8">
-        <button 
-          onClick={() => onSectionChange('ordner')} 
+    <header className="glass-header sticky top-0 z-50 h-14 flex items-center px-3 md:px-6">
+      {/* Left: Logo + Navigation (Desktop) */}
+      <div className="hidden md:flex items-center gap-6">
+        <button
+          onClick={() => onSectionChange('ordner')}
           className="flex items-center hover:opacity-80 transition-opacity"
         >
           <img src={logo} alt="Clairmont" className="h-7 w-auto" />
         </button>
-        
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
+
+        {/* Desktop Navigation — pill-style tabs */}
+        <nav className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.03]">
           {navItems
             .filter((item) => {
               if (item.roles) return item.roles.includes(userRole || '');
@@ -77,15 +77,15 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
                 key={item.id}
                 onClick={() => onSectionChange(item.id)}
                 className={cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors relative',
+                  'px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 relative',
                   activeSection === item.id
-                    ? 'bg-primary/20 text-foreground'
-                    : 'text-muted-foreground'
+                    ? 'nav-pill-active text-foreground'
+                    : 'text-muted-foreground hover:text-foreground/80 hover:bg-white/[0.04]'
                 )}
               >
                 {item.label}
                 {item.id === 'chats' && unreadMessageCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center px-1">
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-destructive text-destructive-foreground text-[11px] font-bold rounded-full flex items-center justify-center px-1 shadow-lg shadow-destructive/30">
                     {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
                   </span>
                 )}
@@ -101,12 +101,12 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
         </button>
       </div>
 
-      {/* Center: Search - Hidden on mobile */}
+      {/* Center: Search — glass input style */}
       <div className="hidden lg:flex flex-1 justify-center px-8">
         <input
           type="text"
           placeholder="Suchen..."
-          className="bg-input/50 border border-border rounded-lg px-4 py-1.5 text-sm text-foreground placeholder:text-muted-foreground w-80 focus:outline-none focus:ring-1 focus:ring-ring"
+          className="glass-input px-4 py-1.5 text-sm text-foreground placeholder:text-muted-foreground w-80 focus:outline-none"
         />
       </div>
 
@@ -126,16 +126,16 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
         onOpenChange={setMobileMenuOpen}
       />
 
-      {/* Right: User Info + Avatar with Dropdown - Hidden on mobile */}
+      {/* Right: User Info + Avatar with Dropdown */}
       <div className="hidden md:flex items-center gap-3">
         <div className="text-right">
           <p className="text-sm font-medium text-foreground">{userName || 'Benutzer'}</p>
           <p className="text-xs text-muted-foreground">{getRoleLabel(userRole)}</p>
         </div>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-9 h-9 rounded-full bg-primary/30 flex items-center justify-center overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background">
+            <button className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/40 to-primary/20 flex items-center justify-center overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 focus:ring-offset-background transition-shadow hover:shadow-lg hover:shadow-primary/10">
               {avatarUrl ? (
                 <img src={avatarUrl} alt={userName ?? ''} className="w-full h-full object-cover" />
               ) : (
@@ -145,7 +145,7 @@ export function Header({ userName, userRole, avatarUrl, activeSection, onSection
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-48 glass border-white/[0.08]">
             <DropdownMenuItem onClick={() => onSectionChange('einstellungen')} className="cursor-pointer">
               <Settings className="w-4 h-4 mr-2" />
               Einstellungen

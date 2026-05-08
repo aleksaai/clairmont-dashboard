@@ -136,7 +136,7 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, user
       <h2 className="text-lg font-semibold text-foreground">Einstellungen</h2>
       
       {/* Profile Picture */}
-      <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-4">
+      <div className="glass-subtle p-5 space-y-4">
         <p className="text-sm font-medium text-foreground">Profilbild</p>
         
         <div className="flex items-center gap-4">
@@ -169,13 +169,13 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, user
       </div>
 
       {/* Name (read-only) */}
-      <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-3">
+      <div className="glass-subtle p-5 space-y-3">
         <p className="text-sm font-medium text-foreground">Name</p>
         <p className="text-sm text-muted-foreground">{userName || 'Nicht angegeben'}</p>
       </div>
 
       {/* Email */}
-      <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-3">
+      <div className="glass-subtle p-5 space-y-3">
         <Label htmlFor="email" className="text-sm font-medium text-foreground">E-Mail-Adresse</Label>
         <div className="flex gap-2">
           <Input
@@ -196,7 +196,7 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, user
       </div>
 
       {/* Password Change */}
-      <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-3">
+      <div className="glass-subtle p-5 space-y-3">
         <p className="text-sm font-medium text-foreground">Passwort</p>
         <p className="text-xs text-muted-foreground mb-2">
           Ändere dein Passwort direkt — neues Passwort setzen und bestätigen.
@@ -212,7 +212,7 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, user
 
       {/* Referral Link for Vertriebler */}
       {userRole === 'vertriebler' && partnerCode && referralLink && (
-        <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-3">
+        <div className="glass-subtle p-5 space-y-3">
           <div className="flex items-center gap-2">
             <Link className="h-4 w-4 text-primary" />
             <p className="text-sm font-medium text-foreground">Dein Empfehlungslink</p>

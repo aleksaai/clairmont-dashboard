@@ -74,8 +74,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header 
+    <div className="min-h-screen bg-mesh flex flex-col">
+      <Header
         userName={profile?.full_name ?? null}
         userRole={role}
         avatarUrl={profile?.avatar_url}
@@ -84,8 +84,8 @@ export default function Dashboard() {
         onSignOut={handleSignOut}
         unreadMessageCount={unreadCount}
       />
-      
-      <main className="flex-1 p-6 overflow-auto">
+
+      <main className="flex-1 p-4 md:p-6 overflow-auto">
         {renderContent()}
       </main>
     </div>

@@ -42,7 +42,7 @@ const productLabels: Record<string, string> = {
   problemfall: "Problemfälle",
 };
 
-const APP_URL = "https://clairmont-mandate-forge.lovable.app";
+const APP_URL = "https://app.clairmont-advisory.com";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

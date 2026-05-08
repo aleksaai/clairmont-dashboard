@@ -134,7 +134,7 @@ export default function Auth() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-mesh">
         <div className="glass p-8">
           <p className="text-muted-foreground">Laden...</p>
         </div>
@@ -143,7 +143,7 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-mesh p-4">
       <div className="w-full max-w-md">
         <div className="glass p-8 space-y-6">
           <div className="text-center space-y-2">

@@ -36,6 +36,14 @@ interface WebhookPayload {
   documentUrls?: Record<string, string[]>;
 }
 
+function sanitizePath(name: string): string {
+  return name
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zA-Z0-9._/-]/g, '_');
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -119,7 +127,7 @@ serve(async (req) => {
     console.log('Folder created with ID:', folder.id);
 
     // Upload form PDF using pdfContent from Clermont format
-    const pdfFileName = payload.pdfContent.name || `Formular_${customerName.replace(/\s+/g, '_')}_${timestamp}.pdf`;
+    const pdfFileName = sanitizePath(payload.pdfContent.name || `Formular_${customerName.replace(/\s+/g, '_')}_${timestamp}.pdf`);
     const pdfPath = `${folder.id}/${pdfFileName}`;
     
     // Decode base64 PDF
@@ -155,6 +163,10 @@ serve(async (req) => {
 
     if (pdfDocError) {
       console.error('Error creating PDF document entry:', pdfDocError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create PDF document entry', details: pdfDocError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Upload additional files - either from files array (base64) or documentUrls (signed URLs)
