@@ -59,11 +59,12 @@ export default function Dashboard() {
         return <ProvisionsrechnerView />;
       case 'einstellungen':
         return (
-          <EinstellungenView 
+          <EinstellungenView
             userName={profile?.full_name ?? null}
             userEmail={user?.email}
             avatarUrl={profile?.avatar_url}
             userId={user?.id}
+            userRole={role}
             onProfileUpdate={refreshProfile}
           />
         );

@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Copy, Check, Link } from 'lucide-react';
 
 interface EinstellungenViewProps {
   userName: string | null;
   userEmail: string | undefined;
   avatarUrl?: string | null;
   userId: string | undefined;
+  userRole?: string | null;
   onProfileUpdate?: () => void;
 }
 
@@ -23,11 +25,40 @@ const getInitials = (name: string | null) => {
   return name.substring(0, 2).toUpperCase();
 };
 
-export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onProfileUpdate }: EinstellungenViewProps) {
+export function EinstellungenView({ userName, userEmail, avatarUrl, userId, userRole, onProfileUpdate }: EinstellungenViewProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [newEmail, setNewEmail] = useState(userEmail || '');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [partnerCode, setPartnerCode] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  useEffect(() => {
+    if (userRole === 'vertriebler' && userId) {
+      supabase
+        .from('partner_codes')
+        .select('code')
+        .eq('user_id', userId)
+        .limit(1)
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setPartnerCode(data[0].code);
+          }
+        });
+    }
+  }, [userId, userRole]);
+
+  const referralLink = partnerCode
+    ? `https://clairmont-advisory.com/prognose?ref=${encodeURIComponent(partnerCode)}`
+    : null;
+
+  const handleCopyLink = async () => {
+    if (!referralLink) return;
+    await navigator.clipboard.writeText(referralLink);
+    setLinkCopied(true);
+    toast({ title: 'Link kopiert', description: 'Der Empfehlungslink wurde in die Zwischenablage kopiert.' });
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
   const handleEmailUpdate = async () => {
     if (!newEmail || newEmail === userEmail) return;
@@ -178,6 +209,37 @@ export function EinstellungenView({ userName, userEmail, avatarUrl, userId, onPr
           Passwort ändern
         </Button>
       </div>
+
+      {/* Referral Link for Vertriebler */}
+      {userRole === 'vertriebler' && partnerCode && referralLink && (
+        <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Link className="h-4 w-4 text-primary" />
+            <p className="text-sm font-medium text-foreground">Dein Empfehlungslink</p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Teile diesen Link mit deinen Kunden — der Partner-Code wird automatisch zugeordnet.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              readOnly
+              value={referralLink}
+              className="flex-1 bg-input/50 border-border text-sm"
+            />
+            <Button
+              onClick={handleCopyLink}
+              size="sm"
+              variant={linkCopied ? 'default' : 'outline'}
+              className="shrink-0"
+            >
+              {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Partner-Code: <span className="font-mono font-medium text-foreground">{partnerCode}</span>
+          </p>
+        </div>
+      )}
     </div>
   );
 }
