@@ -521,29 +521,21 @@ export function ChatsListe() {
         return;
       }
 
-      // Send email notification to receiver if they are a Vertriebler
-      const { data: receiverRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', selectedUser.id)
+      // Send email notification to receiver
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
         .single();
 
-      if (receiverRole?.role === 'vertriebler') {
-        const { data: senderProfile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
-
-        supabase.functions.invoke('notify-vertriebler', {
-          body: {
-            type: 'chat_message',
-            vertrieblerUserId: selectedUser.id,
-            senderName: senderProfile?.full_name || 'Teammitglied',
-            messagePreview: messageInput.trim() || (fileData ? `📎 ${fileData.name}` : ''),
-          },
-        }).catch(err => console.error('Failed to notify Vertriebler:', err));
-      }
+      supabase.functions.invoke('notify-vertriebler', {
+        body: {
+          type: 'chat_message',
+          vertrieblerUserId: selectedUser.id,
+          senderName: senderProfile?.full_name || 'Teammitglied',
+          messagePreview: messageInput.trim() || (fileData ? `📎 ${fileData.name}` : ''),
+        },
+      }).catch(err => console.error('Failed to send chat notification:', err));
 
       setMessageInput('');
       setSelectedFile(null);
