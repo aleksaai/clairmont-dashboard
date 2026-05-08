@@ -391,7 +391,7 @@ export function ProvisionsrechnerView() {
         <Card>
           <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
             <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 bg-muted rounded-lg">
+              <div className="p-1.5 md:p-2 bg-white/[0.06] rounded-lg">
                 <Euro className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
               </div>
               <div>
@@ -405,7 +405,7 @@ export function ProvisionsrechnerView() {
         <Card>
           <CardContent className="pt-4 md:pt-6 p-3 md:p-6">
             <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 bg-muted rounded-lg">
+              <div className="p-1.5 md:p-2 bg-white/[0.06] rounded-lg">
                 <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
               </div>
               <div>
@@ -478,7 +478,7 @@ export function ProvisionsrechnerView() {
             </CardHeader>
             <CardContent>
               {/* Summary */}
-              <div className="grid grid-cols-3 gap-4 mb-5 p-3 bg-muted/30 rounded-lg">
+              <div className="grid grid-cols-3 gap-4 mb-5 p-3 bg-white/[0.04] rounded-lg">
                 <div>
                   <p className="text-xs text-muted-foreground">Gesamt</p>
                   <p className="text-lg font-bold text-foreground">{totalPayout.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €</p>
@@ -501,7 +501,7 @@ export function ProvisionsrechnerView() {
                     <div
                       key={item.id}
                       className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                        done ? 'border-emerald-500/30 bg-emerald-500/5 opacity-60' : 'border-border hover:bg-muted/30'
+                        done ? 'border-emerald-500/30 bg-emerald-500/5 opacity-60' : 'border-white/[0.06] hover:bg-white/[0.04]'
                       }`}
                       onClick={() => togglePayout(item.id)}
                     >
@@ -543,7 +543,7 @@ export function ProvisionsrechnerView() {
               {provisionsByPartner.map(partner => {
                 const config = configMap[partner.partnerCode];
                 return (
-                  <div key={partner.partnerCode} className="border border-border rounded-lg p-4">
+                  <div key={partner.partnerCode} className="border border-white/[0.06] rounded-xl p-4 bg-white/[0.02]">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-sky-400/20 rounded-full flex items-center justify-center">
@@ -573,7 +573,7 @@ export function ProvisionsrechnerView() {
                     </div>
                     
                     {/* Details der Kunden */}
-                    <div className="mt-3 pt-3 border-t border-border/50">
+                    <div className="mt-3 pt-3 border-t border-white/[0.06]">
                       <p className="text-xs text-muted-foreground mb-2">Kunden:</p>
                       <div className="space-y-1">
                         {partner.folders.map(folder => (
@@ -617,7 +617,7 @@ export function ProvisionsrechnerView() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border">
+                  <tr className="border-b border-white/[0.06]">
                     <th className="text-left py-2 px-3 font-medium text-muted-foreground">Code</th>
                     <th className="text-left py-2 px-3 font-medium text-muted-foreground">Typ</th>
                     <th className="text-left py-2 px-3 font-medium text-muted-foreground">Provision</th>
@@ -629,7 +629,7 @@ export function ProvisionsrechnerView() {
                 </thead>
                 <tbody>
                   {provisionConfigs?.map(config => (
-                    <tr key={config.id} className="border-b border-border/50 hover:bg-muted/30">
+                    <tr key={config.id} className="border-b border-white/[0.06]/50 hover:bg-muted/30">
                       <td className="py-2 px-3 font-medium text-foreground">{config.partner_code}</td>
                       <td className="py-2 px-3 text-muted-foreground">
                         {config.provision_type === 'percentage' ? 'Prozent' : 'Fix'}

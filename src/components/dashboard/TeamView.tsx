@@ -323,7 +323,7 @@ export function TeamView() {
         )}
       </div>
       
-      <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-3 md:p-4">
+      <div className="glass-subtle p-3 md:p-4">
         {loading ? (
           <div className="flex items-center justify-center min-h-[200px]">
             <p className="text-muted-foreground">Lädt...</p>
@@ -340,7 +340,7 @@ export function TeamView() {
         ) : (
           <div className="space-y-3">
             {members.map((member) => (
-              <Card key={member.id} className="bg-background/50">
+              <Card key={member.id} className="bg-white/[0.03] border-white/[0.06]">
                 <CardContent className="p-3 md:p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">

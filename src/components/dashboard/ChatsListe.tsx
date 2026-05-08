@@ -559,17 +559,17 @@ export function ChatsListe() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100dvh-8rem)] md:h-[calc(100vh-8rem)] rounded-xl overflow-hidden border border-border">
+    <div className="glass flex flex-col md:flex-row h-[calc(100dvh-8rem)] md:h-[calc(100vh-8rem)] overflow-hidden">
       {/* Left: User List - Full width on mobile when no user selected, hidden when user selected */}
-      <div className={`${selectedUser ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-border bg-card/30 flex-col`}>
+      <div className={`${selectedUser ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-white/[0.06] flex-col`}>
         {/* Search */}
-        <div className="p-3 border-b border-border">
+        <div className="p-3 border-b border-white/[0.06]">
           <input
             type="text"
             placeholder="Nutzer suchen..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-input/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="glass-input w-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
         </div>
 
@@ -591,7 +591,7 @@ export function ChatsListe() {
                       ? 'bg-primary/20'
                       : hasUnread
                         ? 'bg-primary/10 hover:bg-primary/15'
-                        : 'bg-transparent hover:bg-card/50'
+                        : 'bg-transparent hover:bg-white/[0.04]'
                   }`}
                 >
                   {/* Unread indicator line on the left */}
@@ -654,7 +654,7 @@ export function ChatsListe() {
         {selectedUser ? (
           <>
             {/* Chat Header */}
-            <div className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
+            <div className="border-b border-white/[0.06] shrink-0">
               {/* Mobile: Separate search mode vs normal header */}
               {isMobile && showChatSearch ? (
                 // Mobile Search Header - Full width search input
@@ -876,7 +876,7 @@ export function ChatsListe() {
                               className={`max-w-[85%] md:max-w-[70%] px-3 py-2 rounded-xl transition-all duration-200 ${
                                 message.sender_id === user?.id
                                   ? 'bg-primary text-primary-foreground rounded-br-sm'
-                                  : 'bg-card/80 text-foreground rounded-bl-sm'
+                                  : 'bg-white/[0.08] text-foreground rounded-bl-sm backdrop-blur-sm'
                               } ${isCurrentMatch ? 'ring-2 ring-ring shadow-md' : ''} ${isMatch && !isCurrentMatch ? 'ring-1 ring-ring/50' : ''}`}
                             >
                               {message.file_path && (
@@ -914,7 +914,7 @@ export function ChatsListe() {
             </div>
 
             {/* Message Input */}
-            <div className="p-2 md:p-3 border-t border-border bg-card/50 backdrop-blur-sm shrink-0">
+            <div className="p-2 md:p-3 border-t border-white/[0.06] shrink-0">
               {selectedFile && (
                 <div className="mb-2 p-2 bg-muted/50 rounded-lg flex items-center gap-2">
                   {selectedFile.type.startsWith('image/') ? (

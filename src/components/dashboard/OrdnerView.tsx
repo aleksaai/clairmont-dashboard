@@ -87,25 +87,25 @@ const statusLabels: Record<CaseStatus, string> = {
 };
 
 const productConfig: Record<ProductType, { label: string; color: string; bgColor: string }> = {
-  steuern: { 
-    label: 'Steuerfälle', 
+  steuern: {
+    label: 'Steuerfälle',
     color: 'text-blue-400',
-    bgColor: 'bg-blue-500/20 border-blue-500/30'
+    bgColor: 'bg-blue-500/[0.08] border-blue-400/20 shadow-lg shadow-blue-500/[0.06]'
   },
-  versicherung: { 
-    label: 'Baufinanzierungsfälle', 
+  versicherung: {
+    label: 'Baufinanzierungsfälle',
     color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/20 border-emerald-500/30'
+    bgColor: 'bg-emerald-500/[0.08] border-emerald-400/20 shadow-lg shadow-emerald-500/[0.06]'
   },
-  kredit: { 
-    label: 'Kreditfälle', 
+  kredit: {
+    label: 'Kreditfälle',
     color: 'text-yellow-400',
-    bgColor: 'bg-yellow-500/20 border-yellow-500/30'
+    bgColor: 'bg-yellow-500/[0.08] border-yellow-400/20 shadow-lg shadow-yellow-500/[0.06]'
   },
-  problemfall: { 
-    label: 'Problemfälle', 
+  problemfall: {
+    label: 'Problemfälle',
     color: 'text-red-400',
-    bgColor: 'bg-red-500/20 border-red-500/30'
+    bgColor: 'bg-red-500/[0.08] border-red-400/20 shadow-lg shadow-red-500/[0.06]'
   },
 };
 
@@ -751,7 +751,7 @@ export function OrdnerView() {
         </div>
 
         {/* Customer Info */}
-        <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-3 md:p-4">
+        <div className="glass-subtle p-3 md:p-4">
           <h3 className="font-semibold text-foreground">{selectedFolder.customer_name}</h3>
           {selectedFolder.customer_email && (
             <p className="text-sm text-muted-foreground truncate">{selectedFolder.customer_email}</p>
@@ -811,7 +811,7 @@ export function OrdnerView() {
               <div
                 key={doc.id}
                 onClick={() => downloadDocument(doc)}
-                className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4 cursor-pointer hover:bg-card/60 transition-all"
+                className="glass-subtle p-4 cursor-pointer hover:bg-white/[0.06] transition-all"
               >
                 <div className="flex items-center justify-center h-16 mb-3">
                   <Icon className={`w-10 h-10 ${color}`} />
@@ -826,7 +826,7 @@ export function OrdnerView() {
         </div>
 
         {documents.length === 0 && (
-          <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl min-h-[200px] flex items-center justify-center">
+          <div className="glass-subtle min-h-[200px] flex items-center justify-center">
             <div className="text-center space-y-2">
               <FileText className="w-12 h-12 text-muted-foreground/50 mx-auto" />
               <p className="text-muted-foreground">Noch keine Dokumente</p>
@@ -979,7 +979,7 @@ export function OrdnerView() {
               <div
                 key={folder.id}
                 onClick={() => setSelectedFolder(folder)}
-                className="bg-card/40 backdrop-blur-sm border border-border rounded-xl p-4 cursor-pointer hover:bg-card/60 transition-all"
+                className="glass-subtle p-4 cursor-pointer hover:bg-white/[0.06] transition-all"
               >
                 <div className="aspect-square bg-primary/20 rounded-lg mb-3 flex items-center justify-center relative">
                   <Folder className="w-12 h-12 text-primary" />
@@ -1004,7 +1004,7 @@ export function OrdnerView() {
             ))}
           </div>
         ) : (
-          <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl min-h-[300px] flex items-center justify-center">
+          <div className="glass-subtle min-h-[300px] flex items-center justify-center">
             <div className="text-center space-y-2">
               <Folder className="w-12 h-12 text-muted-foreground/50 mx-auto" />
               <p className="text-muted-foreground">Keine Kundenordner vorhanden</p>
@@ -1031,7 +1031,7 @@ export function OrdnerView() {
         </div>
 
         {/* Status List */}
-        <div className="bg-card/40 backdrop-blur-sm border border-border rounded-xl overflow-hidden">
+        <div className="glass-subtle overflow-hidden">
           {productStatuses[selectedProduct].map((status, index) => {
             const count = getStatusCount(status);
             const isLast = index === productStatuses[selectedProduct].length - 1;

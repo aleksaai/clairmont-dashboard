@@ -251,7 +251,7 @@ export function KnowledgeBaseView() {
 
       {/* Entries Grid */}
       {entries.length === 0 ? (
-        <Card className="bg-card/50 border-border">
+        <Card className="glass-subtle">
           <CardContent className="flex flex-col items-center justify-center py-8 md:py-12">
             <BookOpen className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground text-center text-sm md:text-base">
@@ -263,7 +263,7 @@ export function KnowledgeBaseView() {
       ) : (
         <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {entries.map((entry) => (
-            <Card key={entry.id} className="bg-card/50 border-border hover:border-primary/30 transition-colors">
+            <Card key={entry.id} className="glass-subtle hover:border-white/[0.12] hover:bg-white/[0.04] transition-colors">
               <CardHeader className="pb-2 p-3 md:p-6 md:pb-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -292,7 +292,7 @@ export function KnowledgeBaseView() {
                     </span>
                   )}
                   {!entry.product_type && (
-                    <span className="inline-block text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                    <span className="inline-block text-xs px-2 py-1 rounded-full bg-white/[0.06] text-muted-foreground">
                       Alle Bereiche
                     </span>
                   )}
@@ -317,7 +317,7 @@ export function KnowledgeBaseView() {
 
       {/* Add Entry Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-card border-border max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="glass border-white/[0.08] max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Neuer Knowledge Base Eintrag</DialogTitle>
           </DialogHeader>
@@ -330,14 +330,14 @@ export function KnowledgeBaseView() {
                 placeholder="z.B. Ablauf Steuererklärung"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="bg-input/50 border-border"
+                className="glass-input"
               />
             </div>
 
             <div className="space-y-2">
               <Label>Bereich (optional)</Label>
               <Select value={productType} onValueChange={setProductType}>
-                <SelectTrigger className="bg-input/50 border-border">
+                <SelectTrigger className="glass-input">
                   <SelectValue placeholder="Alle Bereiche" />
                 </SelectTrigger>
                 <SelectContent>
@@ -352,7 +352,7 @@ export function KnowledgeBaseView() {
             <div className="space-y-2">
               <Label>Inhaltstyp</Label>
               <Select value={contentType} onValueChange={(v) => setContentType(v as 'text' | 'pdf')}>
-                <SelectTrigger className="bg-input/50 border-border">
+                <SelectTrigger className="glass-input">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -370,7 +370,7 @@ export function KnowledgeBaseView() {
                   placeholder="Gib hier das Wissen ein, das die KI nutzen soll..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="bg-input/50 border-border min-h-[150px]"
+                  className="glass-input min-h-[150px]"
                 />
               </div>
             ) : (
@@ -381,7 +381,7 @@ export function KnowledgeBaseView() {
                   type="file"
                   accept=".pdf"
                   onChange={handleFileChange}
-                  className="bg-input/50 border-border"
+                  className="glass-input"
                 />
                 {selectedFile && (
                   <p className="text-sm text-muted-foreground">
@@ -412,7 +412,7 @@ export function KnowledgeBaseView() {
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteEntry} onOpenChange={() => setDeleteEntry(null)}>
-        <AlertDialogContent className="bg-card border-border">
+        <AlertDialogContent className="glass border-white/[0.08]">
           <AlertDialogHeader>
             <AlertDialogTitle>Eintrag löschen?</AlertDialogTitle>
             <AlertDialogDescription>
