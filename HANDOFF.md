@@ -1,6 +1,6 @@
 # HANDOFF — clairmont-dashboard
 
-**Letzte Aktualisierung:** 2026-04-24 (Marcus, Post-Go-Live-Support + Forgot-Password)
+**Letzte Aktualisierung:** 2026-05-09 (Marcus, Liquid Glass Redesign + Live-Suchleiste)
 **Status:** 🟢 **LIVE + laufender Support**
 
 ## Wo das Projekt steht
@@ -54,6 +54,10 @@ npm run dev    # Vite auf http://localhost:8080
 | 2026-04-22 | Admin-Invite-User 401 | `invite-user` + `delete-user` redeployed mit `verify_jwt: false` (ES256-Bug, siehe claude-team knowledge.md §18) + `apikey`-Header in `TeamView.tsx` |
 | 2026-04-24 | Provisionsrechner-Zahlen falsch | 3 Fixes: (a) `normalizeCode()` Helper in `ProvisionsrechnerView.tsx` (strip `*`, trim, upper) für Partner-Code-Varianten wie `*ALPHA*`/`Alpha `; (b) DB-Reparatur: 49 `updated_at` Werte aus Lovable-CSV via Bulk-UPDATE wiederhergestellt (Trigger disable+enable); (c) Delta 1.614 € in Apr = 1 Folder (Maximilian Charl) steht als `prognose_erstellt` statt `bezahlt` — Aleksas Business-Entscheid |
 | 2026-04-24 | Self-Service Passwort-Reset | `Auth.tsx` um Inline-"Passwort vergessen?"-Mode erweitert, `useAuth.ts` um `resetPassword()` Helper. Kein Backend-Change — nutzt bestehenden `/reset-password` Flow |
+
+| 2026-05-09 | Liquid Glass Redesign | Komplettes UI-Redesign auf Apple-inspirierten Liquid Glass Style. Neues Design-System in `index.css` (`.glass`, `.glass-subtle`, `.glass-input`, `.glass-header`, `.nav-pill-active`, `.bg-mesh`). Card-Base in `card.tsx` auf Glass umgestellt. Alle Views aktualisiert: Header, MobileMenu, Auth, Dashboard, EinstellungenView, OrdnerView, ChatsListe, TeamView, ProvisionsrechnerView, KnowledgeBaseView. |
+| 2026-05-09 | Intelligente Live-Suchleiste | Neue `SearchBar.tsx` Komponente im Header. Durchsucht Kunden (`folders.customer_name`) und Teammitglieder (`profiles.full_name`, `email`) live mit 200ms Debounce. Dropdown gruppiert nach Team/Kunden mit Keyboard-Navigation. Klick auf Kunde öffnet dessen Ordner, Klick auf Teammitglied öffnet den Chat. OrdnerView und ChatsListe akzeptieren jetzt `searchFolderId`/`searchUserId` Props für Deep-Linking. |
+| 2026-05-09 | Empfehlungslink für Vertriebler | EinstellungenView zeigt Vertrieblern ihren persönlichen Empfehlungslink (`clairmont-advisory.com/prognose?ref=CODE`) mit Copy-Button. Prognose-Seite (Website) liest `?ref=` aus URL und füllt Partner-Code automatisch aus (Feld wird versteckt). |
 
 **Offenes Thema:** Provisions-Seite filtert nach `updated_at` — volatiles Feld, wird bei jedem Status-Wechsel/Notiz-Edit überschrieben. Langfrist-Lösung: dediziertes `paid_at` Feld, gesetzt vom Stripe-Webhook bei Status → `bezahlt`. Roadmap, nicht akut.
 

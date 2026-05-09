@@ -6,11 +6,13 @@
 
 Internes Management-Tool für Clairmont Advisory — Vertriebler + Sachbearbeiter + Admin bearbeiten hier Leads, die von der öffentlichen Website (Sibling-Repo: `aleksaai/clairmont-website`) reinkommen. Kanban-Style: Leads durchlaufen Stages von `anfrage_eingegangen` bis `bezahlt`, dazwischen Sachbearbeiter-Review, Prognose-Berechnung, Stripe-Checkout-Versand (One-time oder Ratenzahlung), Ratenzahlungs-Tracking.
 
-## Aktueller Stand (2026-04-20)
+## Aktueller Stand (2026-05-09)
 
-🟡 **In Lovable-Migration.** Der Repo wurde frisch von Lovable gepullt. Sibling-Website wird gleichzeitig migriert. Ziel: raus aus Lovable, rein in eigenes Supabase-Projekt "Clairmont Advisory" + Netlify-Deploy. Vollständiger 7-Phasen-Plan in `SPEC.md` + laufender Stand in `HANDOFF.md`.
+🟢 **LIVE auf Netlify.** Migration von Lovable abgeschlossen (2026-04-20). Auto-Deploy auf Push zu `main`. Supabase-Projekt: `ufnxliieaejdvxcanqux` (Clairmont Advisory).
 
-**Kritisch:** 9 aktive Stripe-Subscriptions → UUID-preserving Data-Migration Pflicht. Cutover-Phase ist atomar (nicht unterbrechbar).
+**Design-System:** Apple-inspirierter **Liquid Glass** Style seit 2026-05-09. Definiert in `index.css` via `@layer components`: `.glass`, `.glass-subtle`, `.glass-input`, `.glass-header`, `.nav-pill-active`, `.bg-mesh`. Card-Base (`card.tsx`) ist global auf Glass umgestellt. Alle neuen UI-Elemente MÜSSEN diese Klassen nutzen.
+
+**Wichtig:** Auf Aleksas MacBook ist **kein Node.js/npm** installiert. Lokaler Dev-Server geht nicht. Workflow: Änderungen committen + pushen → auf Netlify verifizieren (`app.clairmont-advisory.com` / `clairmont-dashboard.netlify.app`).
 
 ## Stack
 
@@ -104,7 +106,7 @@ Auf allen 8 Tabellen. Policies nutzen `has_role()` für Rollen-Gating.
 
 ## Deploy
 
-Aktuell: Lovable-managed. Ziel: **Netlify** (siehe SPEC.md Phase 6).
+**Netlify** — Auto-Deploy auf Push zu `main`. Domain: `app.clairmont-advisory.com`. Netlify-Subdomain: `clairmont-dashboard.netlify.app`.
 
 ## Wer arbeitet hier?
 
