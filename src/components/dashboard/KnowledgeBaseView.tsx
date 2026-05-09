@@ -47,6 +47,15 @@ const productTypeLabels: Record<string, string> = {
   steuern: 'Steuern',
   kredit: 'Kredit',
   versicherung: 'Baufinanzierung',
+  problemfall: 'Problemfall',
+  global_sourcing: 'Global Sourcing & Deals',
+  unternehmensberatung: 'Unternehmensberatung',
+  ai_due_diligence: 'AI & Due Diligence',
+  payment_solutions: 'Payment Solutions',
+  solaranlagen: 'Solaranlagen & Wärmepumpen',
+  immobilien: 'Immobilien',
+  rechtsberatung: 'Rechtsberatung',
+  sonstiges: 'Sonstiges',
 };
 
 export function KnowledgeBaseView() {
@@ -142,7 +151,7 @@ export function KnowledgeBaseView() {
         file_path: filePath,
         file_name: fileName,
         content_type: contentType,
-        product_type: productType === 'all' ? null : (productType as 'steuern' | 'kredit' | 'versicherung'),
+        product_type: productType === 'all' ? null : productType,
       };
 
       const { error } = await supabase.from('knowledge_base').insert(insertData);
@@ -345,6 +354,14 @@ export function KnowledgeBaseView() {
                   <SelectItem value="steuern">Steuern</SelectItem>
                   <SelectItem value="kredit">Kredit</SelectItem>
                   <SelectItem value="versicherung">Baufinanzierung</SelectItem>
+                  <SelectItem value="global_sourcing">Global Sourcing & Deals</SelectItem>
+                  <SelectItem value="unternehmensberatung">Unternehmensberatung</SelectItem>
+                  <SelectItem value="ai_due_diligence">AI & Due Diligence</SelectItem>
+                  <SelectItem value="payment_solutions">Payment Solutions</SelectItem>
+                  <SelectItem value="solaranlagen">Solaranlagen & Wärmepumpen</SelectItem>
+                  <SelectItem value="immobilien">Immobilien</SelectItem>
+                  <SelectItem value="rechtsberatung">Rechtsberatung</SelectItem>
+                  <SelectItem value="sonstiges">Sonstiges</SelectItem>
                 </SelectContent>
               </Select>
             </div>

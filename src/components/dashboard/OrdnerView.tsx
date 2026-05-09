@@ -35,7 +35,7 @@ import { PrognoseDialog } from './PrognoseDialog';
 
 // Include all database enum values for type compatibility, but only show relevant ones in UI
 type CaseStatus = 'neu' | 'bezahlt' | 'in_bearbeitung' | 'abgeschlossen' | 'einspruch' | 'anfrage_eingegangen' | 'prognose_erstellt' | 'angebot_gesendet' | 'anzahlung_erhalten' | 'einspruch_nacharbeit' | 'rueckstand';
-type ProductType = 'steuern' | 'kredit' | 'versicherung' | 'problemfall';
+type ProductType = 'steuern' | 'kredit' | 'versicherung' | 'problemfall' | 'global_sourcing' | 'unternehmensberatung' | 'ai_due_diligence' | 'payment_solutions' | 'solaranlagen' | 'immobilien' | 'rechtsberatung' | 'sonstiges';
 
 interface FolderData {
   id: string;
@@ -70,6 +70,14 @@ const productStatuses: Record<ProductType, CaseStatus[]> = {
   kredit: ['neu', 'anzahlung_erhalten', 'rueckstand', 'bezahlt', 'einspruch'],
   versicherung: ['neu', 'anzahlung_erhalten', 'rueckstand', 'bezahlt', 'einspruch'],
   problemfall: ['neu', 'abgeschlossen'],
+  global_sourcing: ['neu', 'in_bearbeitung', 'abgeschlossen'],
+  unternehmensberatung: ['neu', 'in_bearbeitung', 'abgeschlossen'],
+  ai_due_diligence: ['neu', 'in_bearbeitung', 'abgeschlossen'],
+  payment_solutions: ['neu', 'in_bearbeitung', 'abgeschlossen'],
+  solaranlagen: ['neu', 'in_bearbeitung', 'abgeschlossen'],
+  immobilien: ['neu', 'in_bearbeitung', 'abgeschlossen'],
+  rechtsberatung: ['neu', 'in_bearbeitung', 'abgeschlossen'],
+  sonstiges: ['neu', 'in_bearbeitung', 'abgeschlossen'],
 };
 
 const statusLabels: Record<CaseStatus, string> = {
@@ -107,9 +115,49 @@ const productConfig: Record<ProductType, { label: string; color: string; bgColor
     color: 'text-red-400',
     bgColor: 'bg-red-500/[0.08] border-red-400/20 shadow-lg shadow-red-500/[0.06]'
   },
+  global_sourcing: {
+    label: 'Global Sourcing & Deals',
+    color: 'text-orange-400',
+    bgColor: 'bg-orange-500/[0.08] border-orange-400/20 shadow-lg shadow-orange-500/[0.06]'
+  },
+  unternehmensberatung: {
+    label: 'Unternehmensberatung',
+    color: 'text-violet-400',
+    bgColor: 'bg-violet-500/[0.08] border-violet-400/20 shadow-lg shadow-violet-500/[0.06]'
+  },
+  ai_due_diligence: {
+    label: 'AI & Due Diligence',
+    color: 'text-cyan-400',
+    bgColor: 'bg-cyan-500/[0.08] border-cyan-400/20 shadow-lg shadow-cyan-500/[0.06]'
+  },
+  payment_solutions: {
+    label: 'Payment Solutions',
+    color: 'text-pink-400',
+    bgColor: 'bg-pink-500/[0.08] border-pink-400/20 shadow-lg shadow-pink-500/[0.06]'
+  },
+  solaranlagen: {
+    label: 'Solaranlagen & Wärmepumpen',
+    color: 'text-amber-400',
+    bgColor: 'bg-amber-500/[0.08] border-amber-400/20 shadow-lg shadow-amber-500/[0.06]'
+  },
+  immobilien: {
+    label: 'Immobilien',
+    color: 'text-teal-400',
+    bgColor: 'bg-teal-500/[0.08] border-teal-400/20 shadow-lg shadow-teal-500/[0.06]'
+  },
+  rechtsberatung: {
+    label: 'Rechtsberatung',
+    color: 'text-indigo-400',
+    bgColor: 'bg-indigo-500/[0.08] border-indigo-400/20 shadow-lg shadow-indigo-500/[0.06]'
+  },
+  sonstiges: {
+    label: 'Sonstiges',
+    color: 'text-gray-400',
+    bgColor: 'bg-gray-500/[0.08] border-gray-400/20 shadow-lg shadow-gray-500/[0.06]'
+  },
 };
 
-const allProducts: ProductType[] = ['steuern', 'versicherung', 'kredit', 'problemfall'];
+const allProducts: ProductType[] = ['steuern', 'versicherung', 'kredit', 'problemfall', 'global_sourcing', 'unternehmensberatung', 'ai_due_diligence', 'payment_solutions', 'solaranlagen', 'immobilien', 'rechtsberatung', 'sonstiges'];
 
 // Get context-dependent status label (for Problemfälle)
 const getStatusLabel = (status: CaseStatus, product?: ProductType): string => {

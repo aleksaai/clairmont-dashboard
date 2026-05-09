@@ -1,0 +1,9 @@
+-- Add new product types for all website services
+ALTER TYPE product_type ADD VALUE IF NOT EXISTS 'global_sourcing';
+ALTER TYPE product_type ADD VALUE IF NOT EXISTS 'unternehmensberatung';
+ALTER TYPE product_type ADD VALUE IF NOT EXISTS 'ai_due_diligence';
+ALTER TYPE product_type ADD VALUE IF NOT EXISTS 'payment_solutions';
+ALTER TYPE product_type ADD VALUE IF NOT EXISTS 'solaranlagen';
+ALTER TYPE product_type ADD VALUE IF NOT EXISTS 'immobilien';
+ALTER TYPE product_type ADD VALUE IF NOT EXISTS 'rechtsberatung';
+ALTER TYPE product_type ADD VALUE IF NOT EXISTS 'sonstiges';

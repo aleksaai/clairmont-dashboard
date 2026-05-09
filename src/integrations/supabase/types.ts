@@ -351,7 +351,7 @@ export type Database = {
         | "anzahlung_erhalten"
         | "einspruch_nacharbeit"
         | "rueckstand"
-      product_type: "steuern" | "kredit" | "versicherung" | "problemfall"
+      product_type: "steuern" | "kredit" | "versicherung" | "problemfall" | "global_sourcing" | "unternehmensberatung" | "ai_due_diligence" | "payment_solutions" | "solaranlagen" | "immobilien" | "rechtsberatung" | "sonstiges"
     }
     CompositeTypes: {
       [_ in never]: never
