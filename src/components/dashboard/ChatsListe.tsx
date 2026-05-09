@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Send, Paperclip, FileText, Image, X, Search, ChevronUp, ChevronDown, Download, ArrowLeft } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
+import { BroadcastDialog } from './BroadcastDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -47,7 +48,7 @@ interface ChatsListeProps {
 }
 
 export function ChatsListe({ searchUserId, onSearchConsumed }: ChatsListeProps = {}) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const isMobile = useIsMobile();
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
@@ -577,8 +578,8 @@ export function ChatsListe({ searchUserId, onSearchConsumed }: ChatsListeProps =
     <div className="glass flex flex-col md:flex-row h-[calc(100dvh-8rem)] md:h-[calc(100vh-8rem)] overflow-hidden">
       {/* Left: User List - Full width on mobile when no user selected, hidden when user selected */}
       <div className={`${selectedUser ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-white/[0.06] flex-col`}>
-        {/* Search */}
-        <div className="p-3 border-b border-white/[0.06]">
+        {/* Search + Broadcast */}
+        <div className="p-3 border-b border-white/[0.06] space-y-2">
           <input
             type="text"
             placeholder="Nutzer suchen..."
@@ -586,6 +587,7 @@ export function ChatsListe({ searchUserId, onSearchConsumed }: ChatsListeProps =
             onChange={(e) => setSearchQuery(e.target.value)}
             className="glass-input w-full px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
+          {role === 'admin' && <BroadcastDialog />}
         </div>
 
         {/* User List */}
