@@ -24,6 +24,7 @@ interface NotificationRequest {
 const statusLabels: Record<string, string> = {
   neu: "Neu / Anfrage",
   bezahlt: "Bezahlt",
+  abgeschickt: "Abgeschickt",
   in_bearbeitung: "In Bearbeitung",
   abgeschlossen: "Abgeschlossen",
   einspruch: "Einspruch",
