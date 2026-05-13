@@ -30,8 +30,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/useAuth';
+import { useVisibleProducts } from '@/hooks/useVisibleProducts';
 import { EmailDialog } from './EmailDialog';
 import { PrognoseDialog } from './PrognoseDialog';
+import { OrdnerVisibilitySettings } from './OrdnerVisibilitySettings';
 
 // Include all database enum values for type compatibility, but only show relevant ones in UI
 type CaseStatus = 'neu' | 'bezahlt' | 'abgeschickt' | 'in_bearbeitung' | 'abgeschlossen' | 'einspruch' | 'anfrage_eingegangen' | 'prognose_erstellt' | 'angebot_gesendet' | 'anzahlung_erhalten' | 'einspruch_nacharbeit' | 'rueckstand';
@@ -247,6 +249,11 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [partnerCode, setPartnerCode] = useState('');
+
+  // Per-user product visibility (admin/sachbearbeiter via settings popover,
+  // vertriebler auto-computed from their partner_codes against folders)
+  const { visibleProducts, visibilityMap, toggleVisibility, canManageVisibility } =
+    useVisibleProducts(user?.id, role, folders);
 
   useEffect(() => {
     fetchFolders();
@@ -1128,11 +1135,25 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
   }
 
   // EBENE 1: Produkt-Ordner (Steuern, Kredit, Versicherung)
+  const productLabelsMap = allProducts.reduce(
+    (acc, p) => ({ ...acc, [p]: productConfig[p].label }),
+    {} as Record<ProductType, string>
+  );
+
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">Mein Drive</h2>
-        <p className="text-sm text-muted-foreground">Wählen Sie eine Kategorie</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Mein Drive</h2>
+          <p className="text-sm text-muted-foreground">Wählen Sie eine Kategorie</p>
+        </div>
+        {canManageVisibility && (
+          <OrdnerVisibilitySettings
+            visibilityMap={visibilityMap}
+            productLabels={productLabelsMap}
+            onToggle={toggleVisibility}
+          />
+        )}
       </div>
 
       {/* Product Folders Grid */}
@@ -1140,9 +1161,21 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Laden...</p>
         </div>
+      ) : visibleProducts.length === 0 ? (
+        <div className="glass-subtle min-h-[300px] flex items-center justify-center">
+          <div className="text-center space-y-2">
+            <Folder className="w-12 h-12 text-muted-foreground/50 mx-auto" />
+            <p className="text-muted-foreground">Keine Ordner sichtbar</p>
+            {canManageVisibility && (
+              <p className="text-sm text-muted-foreground/70">
+                Klicken Sie oben rechts auf "Ordner verwalten" um Kategorien einzublenden.
+              </p>
+            )}
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {allProducts.map((product) => {
+          {visibleProducts.map((product) => {
             const config = productConfig[product];
             const count = getProductCount(product);
             return (

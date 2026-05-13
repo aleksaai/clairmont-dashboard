@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -282,7 +282,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
-          language: string
+          language: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -290,7 +290,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
-          language?: string
+          language?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -298,7 +298,28 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
-          language?: string
+          language?: string | null
+        }
+        Relationships: []
+      }
+      user_product_visibility: {
+        Row: {
+          is_visible: boolean
+          product: Database["public"]["Enums"]["product_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          is_visible?: boolean
+          product: Database["public"]["Enums"]["product_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          is_visible?: boolean
+          product?: Database["public"]["Enums"]["product_type"]
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -342,6 +363,7 @@ export type Database = {
       case_status:
         | "neu"
         | "bezahlt"
+        | "abgeschickt"
         | "in_bearbeitung"
         | "abgeschlossen"
         | "einspruch"
@@ -351,7 +373,19 @@ export type Database = {
         | "anzahlung_erhalten"
         | "einspruch_nacharbeit"
         | "rueckstand"
-      product_type: "steuern" | "kredit" | "versicherung" | "problemfall" | "global_sourcing" | "unternehmensberatung" | "ai_due_diligence" | "payment_solutions" | "solaranlagen" | "immobilien" | "rechtsberatung" | "sonstiges"
+      product_type:
+        | "steuern"
+        | "kredit"
+        | "versicherung"
+        | "problemfall"
+        | "global_sourcing"
+        | "unternehmensberatung"
+        | "ai_due_diligence"
+        | "payment_solutions"
+        | "solaranlagen"
+        | "immobilien"
+        | "rechtsberatung"
+        | "sonstiges"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -483,6 +517,7 @@ export const Constants = {
       case_status: [
         "neu",
         "bezahlt",
+        "abgeschickt",
         "in_bearbeitung",
         "abgeschlossen",
         "einspruch",
@@ -493,7 +528,20 @@ export const Constants = {
         "einspruch_nacharbeit",
         "rueckstand",
       ],
-      product_type: ["steuern", "kredit", "versicherung", "problemfall"],
+      product_type: [
+        "steuern",
+        "kredit",
+        "versicherung",
+        "problemfall",
+        "global_sourcing",
+        "unternehmensberatung",
+        "ai_due_diligence",
+        "payment_solutions",
+        "solaranlagen",
+        "immobilien",
+        "rechtsberatung",
+        "sonstiges",
+      ],
     },
   },
 } as const
