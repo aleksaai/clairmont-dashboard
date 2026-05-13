@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Folder } from 'lucide-react';
+import { Plus, Trash2, Folder, FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,11 +64,11 @@ export function CustomFolderManager({ triggerLabel = 'Eigene Ordner verwalten' }
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="border-border">
-          <Plus className="w-4 h-4 mr-1 md:mr-2" />
+          <FolderPlus className="w-4 h-4 sm:mr-2" />
           <span className="hidden sm:inline">{triggerLabel}</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Eigene Ordner verwalten</DialogTitle>
         </DialogHeader>
@@ -280,14 +280,14 @@ function ColorPicker({
   onSelect: (token: ColorToken) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-3">
       {COLOR_PRESETS.map((p) => (
         <button
           key={p.token}
           type="button"
           onClick={() => onSelect(p.token)}
           aria-label={p.label}
-          className={`w-7 h-7 rounded-full ${p.swatch} transition-all ${
+          className={`w-8 h-8 rounded-full ${p.swatch} transition-all ${
             selected === p.token ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background' : 'opacity-70 hover:opacity-100'
           }`}
         />
