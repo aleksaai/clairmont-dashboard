@@ -31,6 +31,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useVisibleProducts } from '@/hooks/useVisibleProducts';
+import { useCustomProducts, type CustomProduct } from '@/hooks/useCustomProducts';
+import { getColorPreset } from '@/lib/customProductColors';
 import { EmailDialog } from './EmailDialog';
 import { PrognoseDialog } from './PrognoseDialog';
 import { OrdnerVisibilitySettings } from './OrdnerVisibilitySettings';
@@ -44,8 +46,10 @@ interface FolderData {
   name: string;
   customer_name: string;
   customer_email: string | null;
-  status: CaseStatus;
-  product: ProductType;
+  status: CaseStatus | null;
+  custom_product_id: string | null;
+  custom_status_id: string | null;
+  product: ProductType | null;
   partner_code: string | null;
   created_at: string;
   prognose_amount: number | null;
@@ -227,6 +231,8 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
   // Navigation state
   const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<CaseStatus | null>(null);
+  const [selectedCustomProductId, setSelectedCustomProductId] = useState<string | null>(null);
+  const [selectedCustomStatusId, setSelectedCustomStatusId] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<FolderData | null>(null);
   
   // Data state
@@ -250,10 +256,30 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
   const [customerEmail, setCustomerEmail] = useState('');
   const [partnerCode, setPartnerCode] = useState('');
 
+  // Admin-defined custom folder categories (Phase 2)
+  const { customProducts } = useCustomProducts();
+
   // Per-user product visibility (admin/sachbearbeiter via settings popover,
   // vertriebler auto-computed from their partner_codes against folders)
-  const { visibleProducts, visibilityMap, toggleVisibility, canManageVisibility } =
-    useVisibleProducts(user?.id, role, folders);
+  const {
+    visibleProducts,
+    visibilityMap,
+    toggleVisibility,
+    visibleCustomProductIds,
+    customVisibilityMap,
+    toggleCustomVisibility,
+    canManageVisibility,
+    isAdmin,
+  } = useVisibleProducts(user?.id, role, folders, customProducts);
+
+  const visibleCustomProducts = customProducts.filter((cp) => visibleCustomProductIds.has(cp.id));
+  const selectedCustomProduct: CustomProduct | undefined =
+    selectedCustomProductId !== null
+      ? customProducts.find((cp) => cp.id === selectedCustomProductId)
+      : undefined;
+  const selectedCustomStatus = selectedCustomProduct?.statuses.find(
+    (s) => s.id === selectedCustomStatusId
+  );
 
   useEffect(() => {
     fetchFolders();
@@ -263,8 +289,17 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
     if (searchFolderId && folders.length > 0) {
       const target = folders.find(f => f.id === searchFolderId);
       if (target) {
-        setSelectedProduct(target.product);
-        setSelectedStatus(null);
+        if (target.custom_product_id) {
+          setSelectedCustomProductId(target.custom_product_id);
+          setSelectedCustomStatusId(null);
+          setSelectedProduct(null);
+          setSelectedStatus(null);
+        } else {
+          setSelectedProduct(target.product);
+          setSelectedStatus(null);
+          setSelectedCustomProductId(null);
+          setSelectedCustomStatusId(null);
+        }
         setSelectedFolder(target);
         onSearchConsumed?.();
       }
@@ -308,12 +343,15 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
       
       // Notify Vertriebler if a new partner code was assigned
       if (newCode) {
+        const cpLabel = selectedFolder.custom_product_id
+          ? customProducts.find((cp) => cp.id === selectedFolder.custom_product_id)?.label ?? null
+          : selectedFolder.product;
         supabase.functions.invoke('notify-vertriebler', {
           body: {
             type: 'new_customer',
             partnerCode: newCode,
             customerName: selectedFolder.customer_name,
-            productType: selectedFolder.product,
+            productType: cpLabel,
           },
         }).catch(err => console.error('Failed to notify Vertriebler:', err));
       }
@@ -334,7 +372,14 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
   };
 
   const createFolder = async () => {
-    if (!customerName.trim() || !user?.id || !selectedProduct || !selectedStatus) return;
+    if (!customerName.trim() || !user?.id) return;
+
+    const isCustomCreate = selectedCustomProductId !== null;
+    if (isCustomCreate) {
+      if (!selectedCustomStatusId) return;
+    } else if (!selectedProduct || !selectedStatus) {
+      return;
+    }
 
     const date = new Date().toLocaleDateString('de-DE');
     const folderName = `${customerName} - ${date}`;
@@ -343,8 +388,10 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
       name: folderName,
       customer_name: customerName,
       customer_email: customerEmail || null,
-      product: selectedProduct,
-      status: selectedStatus,
+      product: isCustomCreate ? null : selectedProduct,
+      status: isCustomCreate ? null : selectedStatus,
+      custom_product_id: isCustomCreate ? selectedCustomProductId : null,
+      custom_status_id: isCustomCreate ? selectedCustomStatusId : null,
       partner_code: partnerCode || null,
       created_by: user.id,
     });
@@ -356,12 +403,15 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
       
       // Notify Vertriebler if partner code was set
       if (partnerCode?.trim()) {
+        const customLabel = isCustomCreate
+          ? selectedCustomProduct?.label ?? 'Eigener Ordner'
+          : null;
         supabase.functions.invoke('notify-vertriebler', {
           body: {
             type: 'new_customer',
             partnerCode: partnerCode.trim(),
             customerName: customerName,
-            productType: selectedProduct,
+            productType: isCustomCreate ? customLabel : selectedProduct,
           },
         }).catch(err => console.error('Failed to notify Vertriebler:', err));
       }
@@ -374,33 +424,49 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
     }
   };
 
-  const updateStatus = async (folderId: string, newStatus: CaseStatus) => {
-    // Find the folder to get partner_code and customer_name before updating
+  const updateStatus = async (folderId: string, value: string) => {
+    // Find the folder to know if we're updating the native or custom status
     const folder = folders.find(f => f.id === folderId);
-    
+    if (!folder) return;
+
+    const isCustom = folder.custom_product_id !== null;
+    const update = isCustom
+      ? { custom_status_id: value }
+      : { status: value as CaseStatus };
+
     const { error } = await supabase
       .from('folders')
-      .update({ status: newStatus })
+      .update(update)
       .eq('id', folderId);
 
     if (error) {
       toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
     } else {
-      // Notify Vertriebler about status change
-      if (folder?.partner_code) {
+      // Notify Vertriebler about status change — send a human-readable label
+      if (folder.partner_code) {
+        let label: string = value;
+        if (isCustom) {
+          const cp = customProducts.find(p => p.id === folder.custom_product_id);
+          label = cp?.statuses.find(s => s.id === value)?.label ?? value;
+        }
         supabase.functions.invoke('notify-vertriebler', {
           body: {
             type: 'status_change',
             partnerCode: folder.partner_code,
             customerName: folder.customer_name,
-            newStatus: newStatus,
+            newStatus: label,
           },
         }).catch(err => console.error('Failed to notify Vertriebler:', err));
       }
-      
+
       fetchFolders();
       if (selectedFolder?.id === folderId) {
-        setSelectedFolder({ ...selectedFolder, status: newStatus });
+        setSelectedFolder({
+          ...selectedFolder,
+          ...(isCustom
+            ? { custom_status_id: value }
+            : { status: value as CaseStatus }),
+        });
       }
     }
   };
@@ -610,8 +676,12 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
       setDocuments([]);
     } else if (selectedStatus) {
       setSelectedStatus(null);
+    } else if (selectedCustomStatusId) {
+      setSelectedCustomStatusId(null);
     } else if (selectedProduct) {
       setSelectedProduct(null);
+    } else if (selectedCustomProductId) {
+      setSelectedCustomProductId(null);
     }
   };
 
@@ -620,18 +690,32 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
     const parts: string[] = ['Drive'];
     if (selectedProduct) parts.push(productConfig[selectedProduct].label);
     if (selectedStatus && selectedProduct) parts.push(getStatusLabel(selectedStatus, selectedProduct));
+    if (selectedCustomProduct) parts.push(selectedCustomProduct.label);
+    if (selectedCustomStatus) parts.push(selectedCustomStatus.label);
     if (selectedFolder) parts.push(selectedFolder.customer_name);
     return parts;
   };
 
-  // Filter folders by selected product and status
-  const filteredFolders = folders.filter(f => 
-    f.product === selectedProduct && f.status === selectedStatus
-  );
+  // Filter folders by selected (native OR custom) product+status
+  const filteredFolders = folders.filter((f) => {
+    if (selectedCustomProductId) {
+      return (
+        f.custom_product_id === selectedCustomProductId &&
+        f.custom_status_id === selectedCustomStatusId
+      );
+    }
+    return f.product === selectedProduct && f.status === selectedStatus;
+  });
 
   // Count folders per status for current product
   const getStatusCount = (status: CaseStatus) => {
     return folders.filter(f => f.product === selectedProduct && f.status === status).length;
+  };
+
+  const getCustomStatusCount = (statusId: string) => {
+    return folders.filter(
+      (f) => f.custom_product_id === selectedCustomProductId && f.custom_status_id === statusId
+    ).length;
   };
 
   // Count folders per product
@@ -639,22 +723,29 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
     return folders.filter(f => f.product === product).length;
   };
 
+  const getCustomProductCount = (id: string) => {
+    return folders.filter((f) => f.custom_product_id === id).length;
+  };
+
   // Render breadcrumb navigation
   const renderBreadcrumb = () => {
     const handleBreadcrumbClick = (index: number) => {
       if (index === 0) {
-        // "Drive" - zurück zur Produktauswahl
+        // "Drive" - back to product selection
         setSelectedProduct(null);
         setSelectedStatus(null);
+        setSelectedCustomProductId(null);
+        setSelectedCustomStatusId(null);
         setSelectedFolder(null);
         setDocuments([]);
-      } else if (index === 1 && selectedProduct) {
-        // Produkt (z.B. "Steuerfälle") - zurück zur Status-Liste
+      } else if (index === 1) {
+        // Product label - back to status list
         setSelectedStatus(null);
+        setSelectedCustomStatusId(null);
         setSelectedFolder(null);
         setDocuments([]);
-      } else if (index === 2 && selectedStatus) {
-        // Status - zurück zur Kundenordner-Liste
+      } else if (index === 2) {
+        // Status - back to folder list
         setSelectedFolder(null);
         setDocuments([]);
       }
@@ -776,19 +867,36 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
               <span className="hidden sm:inline">E-Mail</span>
             </Button>
             
-            <Select
-              value={selectedFolder.status}
-              onValueChange={(value) => updateStatus(selectedFolder.id, value as CaseStatus)}
-            >
-              <SelectTrigger className="w-32 sm:w-40 bg-input/50 border-border text-xs sm:text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {productStatuses[selectedFolder.product].map((status) => (
-                  <SelectItem key={status} value={status}>{getStatusLabel(status, selectedFolder.product)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {selectedFolder.custom_product_id ? (
+              <Select
+                value={selectedFolder.custom_status_id ?? undefined}
+                onValueChange={(value) => updateStatus(selectedFolder.id, value)}
+              >
+                <SelectTrigger className="w-32 sm:w-40 bg-input/50 border-border text-xs sm:text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(customProducts.find((cp) => cp.id === selectedFolder.custom_product_id)
+                    ?.statuses ?? []).map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : selectedFolder.product ? (
+              <Select
+                value={selectedFolder.status ?? undefined}
+                onValueChange={(value) => updateStatus(selectedFolder.id, value)}
+              >
+                <SelectTrigger className="w-32 sm:w-40 bg-input/50 border-border text-xs sm:text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {productStatuses[selectedFolder.product].map((status) => (
+                    <SelectItem key={status} value={status}>{getStatusLabel(status, selectedFolder.product!)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
             
             <Label htmlFor="file-upload" className="cursor-pointer">
               <Button asChild size="sm" disabled={isUploading}>
@@ -919,7 +1027,7 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
           }}
           customerName={selectedFolder.customer_name}
           customerEmail={selectedFolder.customer_email}
-          productType={selectedFolder.product}
+          productType={selectedFolder.product ?? undefined}
           folderName={selectedFolder.name}
           isOfferMode={isOfferMode}
           prognoseAmount={selectedFolder.prognose_amount}
@@ -974,8 +1082,18 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
     );
   }
 
-  // EBENE 3: Kundenfälle für ausgewählten Status
-  if (selectedProduct && selectedStatus) {
+  // EBENE 3: Kundenfälle für ausgewählten Status (native ODER custom)
+  if ((selectedProduct && selectedStatus) || (selectedCustomProductId && selectedCustomStatusId)) {
+    const headerProductLabel = selectedCustomProduct
+      ? selectedCustomProduct.label
+      : selectedProduct
+        ? productConfig[selectedProduct].label
+        : '';
+    const headerStatusLabel = selectedCustomStatus
+      ? selectedCustomStatus.label
+      : selectedStatus && selectedProduct
+        ? getStatusLabel(selectedStatus, selectedProduct)
+        : '';
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -985,7 +1103,7 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
             </Button>
             {renderBreadcrumb()}
           </div>
-          
+
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary text-primary-foreground">
@@ -999,8 +1117,8 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="bg-muted/30 rounded-lg p-3 text-sm">
-                  <p><strong>Produkt:</strong> {productConfig[selectedProduct].label}</p>
-                  <p><strong>Status:</strong> {getStatusLabel(selectedStatus, selectedProduct)}</p>
+                  <p><strong>Produkt:</strong> {headerProductLabel}</p>
+                  <p><strong>Status:</strong> {headerStatusLabel}</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="customer-name">Kundenname *</Label>
@@ -1091,7 +1209,55 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
     );
   }
 
-  // EBENE 2: Status-Liste für ausgewähltes Produkt
+  // EBENE 2: Status-Liste für ausgewähltes Produkt (native ODER custom)
+  if (selectedCustomProductId && selectedCustomProduct) {
+    const preset = getColorPreset(selectedCustomProduct.color_token);
+    const statuses = selectedCustomProduct.statuses;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={goBack}>
+            ← Zurück
+          </Button>
+          {renderBreadcrumb()}
+        </div>
+
+        <div className="glass-subtle overflow-hidden">
+          {statuses.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              Noch keine Unterordner. Ein Admin kann sie über "Eigene Ordner verwalten" anlegen.
+            </div>
+          ) : (
+            statuses.map((s, index) => {
+              const count = getCustomStatusCount(s.id);
+              const isLast = index === statuses.length - 1;
+              return (
+                <div
+                  key={s.id}
+                  onClick={() => setSelectedCustomStatusId(s.id)}
+                  className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-all ${!isLast ? 'border-b border-border/50' : ''}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${preset.bgColor}`}>
+                      <Folder className={`w-5 h-5 ${preset.color}`} />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{s.label}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {count} Kundenordner
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (selectedProduct) {
     const config = productConfig[selectedProduct];
     return (
@@ -1151,7 +1317,11 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
           <OrdnerVisibilitySettings
             visibilityMap={visibilityMap}
             productLabels={productLabelsMap}
+            customProducts={customProducts}
+            customVisibilityMap={customVisibilityMap}
             onToggle={toggleVisibility}
+            onToggleCustom={toggleCustomVisibility}
+            isAdmin={isAdmin}
           />
         )}
       </div>
@@ -1161,7 +1331,7 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Laden...</p>
         </div>
-      ) : visibleProducts.length === 0 ? (
+      ) : visibleProducts.length === 0 && visibleCustomProducts.length === 0 ? (
         <div className="glass-subtle min-h-[300px] flex items-center justify-center">
           <div className="text-center space-y-2">
             <Folder className="w-12 h-12 text-muted-foreground/50 mx-auto" />
@@ -1189,6 +1359,28 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
                 </div>
                 <h3 className={`text-lg font-semibold text-center ${config.color}`}>
                   {config.label}
+                </h3>
+                <p className="text-sm text-center text-muted-foreground mt-1">
+                  {count} {count === 1 ? 'Kundenordner' : 'Kundenordner'}
+                </p>
+              </div>
+            );
+          })}
+
+          {visibleCustomProducts.map((cp) => {
+            const preset = getColorPreset(cp.color_token);
+            const count = getCustomProductCount(cp.id);
+            return (
+              <div
+                key={cp.id}
+                onClick={() => setSelectedCustomProductId(cp.id)}
+                className={`border rounded-xl p-6 cursor-pointer hover:scale-[1.02] transition-all ${preset.bgColor}`}
+              >
+                <div className="flex items-center justify-center h-24 mb-4">
+                  <Folder className={`w-16 h-16 ${preset.color}`} />
+                </div>
+                <h3 className={`text-lg font-semibold text-center ${preset.color}`}>
+                  {cp.label}
                 </h3>
                 <p className="text-sm text-center text-muted-foreground mt-1">
                   {count} {count === 1 ? 'Kundenordner' : 'Kundenordner'}

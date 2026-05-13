@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      custom_products: {
+        Row: {
+          color_token: string
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color_token?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color_token?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      custom_statuses: {
+        Row: {
+          created_at: string
+          custom_product_id: string
+          id: string
+          label: string
+          name: string
+          order_index: number
+        }
+        Insert: {
+          created_at?: string
+          custom_product_id: string
+          id?: string
+          label: string
+          name: string
+          order_index?: number
+        }
+        Update: {
+          created_at?: string
+          custom_product_id?: string
+          id?: string
+          label?: string
+          name?: string
+          order_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_statuses_custom_product_id_fkey"
+            columns: ["custom_product_id"]
+            isOneToOne: false
+            referencedRelation: "custom_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           created_at: string
@@ -67,6 +132,8 @@ export type Database = {
           assigned_to: string | null
           created_at: string
           created_by: string | null
+          custom_product_id: string | null
+          custom_status_id: string | null
           customer_email: string | null
           customer_name: string
           id: string
@@ -79,16 +146,18 @@ export type Database = {
           payment_link_url: string | null
           payment_selection_token: string | null
           payment_status: string | null
-          product: Database["public"]["Enums"]["product_type"]
+          product: Database["public"]["Enums"]["product_type"] | null
           prognose_amount: number | null
           prognose_created_at: string | null
-          status: Database["public"]["Enums"]["case_status"]
+          status: Database["public"]["Enums"]["case_status"] | null
           updated_at: string
         }
         Insert: {
           assigned_to?: string | null
           created_at?: string
           created_by?: string | null
+          custom_product_id?: string | null
+          custom_status_id?: string | null
           customer_email?: string | null
           customer_name: string
           id?: string
@@ -101,16 +170,18 @@ export type Database = {
           payment_link_url?: string | null
           payment_selection_token?: string | null
           payment_status?: string | null
-          product?: Database["public"]["Enums"]["product_type"]
+          product?: Database["public"]["Enums"]["product_type"] | null
           prognose_amount?: number | null
           prognose_created_at?: string | null
-          status?: Database["public"]["Enums"]["case_status"]
+          status?: Database["public"]["Enums"]["case_status"] | null
           updated_at?: string
         }
         Update: {
           assigned_to?: string | null
           created_at?: string
           created_by?: string | null
+          custom_product_id?: string | null
+          custom_status_id?: string | null
           customer_email?: string | null
           customer_name?: string
           id?: string
@@ -123,10 +194,10 @@ export type Database = {
           payment_link_url?: string | null
           payment_selection_token?: string | null
           payment_status?: string | null
-          product?: Database["public"]["Enums"]["product_type"]
+          product?: Database["public"]["Enums"]["product_type"] | null
           prognose_amount?: number | null
           prognose_created_at?: string | null
-          status?: Database["public"]["Enums"]["case_status"]
+          status?: Database["public"]["Enums"]["case_status"] | null
           updated_at?: string
         }
         Relationships: [
@@ -142,6 +213,20 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folders_custom_product_id_fkey"
+            columns: ["custom_product_id"]
+            isOneToOne: false
+            referencedRelation: "custom_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folders_custom_status_id_fkey"
+            columns: ["custom_status_id"]
+            isOneToOne: false
+            referencedRelation: "custom_statuses"
             referencedColumns: ["id"]
           },
         ]
@@ -301,6 +386,35 @@ export type Database = {
           language?: string | null
         }
         Relationships: []
+      }
+      user_custom_product_visibility: {
+        Row: {
+          custom_product_id: string
+          is_visible: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          custom_product_id: string
+          is_visible?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          custom_product_id?: string
+          is_visible?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_custom_product_visibility_custom_product_id_fkey"
+            columns: ["custom_product_id"]
+            isOneToOne: false
+            referencedRelation: "custom_products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_product_visibility: {
         Row: {
