@@ -14,6 +14,9 @@ interface EmailRequest {
   message: string;
   customerName: string;
   paymentLinkUrl?: string;
+  // Kept for backwards compatibility with any old caller, but ignored — the
+  // CTA button no longer hardcodes a euro amount because the customer picks
+  // the payment plan on the portal.
   feeAmount?: number;
 }
 
@@ -24,7 +27,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { to, subject, message, customerName, paymentLinkUrl, feeAmount }: EmailRequest = await req.json();
+    const { to, subject, message, customerName, paymentLinkUrl }: EmailRequest = await req.json();
 
     console.log(`Sending email to: ${to}, subject: ${subject}`);
     console.log(`Payment link included: ${!!paymentLinkUrl}`);
@@ -37,24 +40,25 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Build CTA button HTML if payment link is provided
+    // Build CTA button HTML if a payment-portal URL is provided.
+    // The button text intentionally avoids a hardcoded euro amount because
+    // the customer chooses one-time vs. installments on the portal page.
     let ctaButtonHtml = "";
     if (paymentLinkUrl) {
-      const formattedFee = feeAmount ? feeAmount.toFixed(2).replace('.', ',') : null;
       ctaButtonHtml = `
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${paymentLinkUrl}" 
+          <a href="${paymentLinkUrl}"
              target="_blank"
-             style="display: inline-block; 
-                    background-color: #2563eb; 
-                    color: #ffffff; 
-                    text-decoration: none; 
-                    padding: 16px 32px; 
-                    border-radius: 8px; 
-                    font-size: 16px; 
+             style="display: inline-block;
+                    background-color: #1F3D5C;
+                    color: #ffffff;
+                    text-decoration: none;
+                    padding: 16px 32px;
+                    border-radius: 8px;
+                    font-size: 16px;
                     font-weight: 600;
-                    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.25);">
-            ${formattedFee ? `Jetzt ${formattedFee} € bezahlen` : 'Jetzt bezahlen'}
+                    box-shadow: 0 4px 6px rgba(31, 61, 92, 0.25);">
+            Angebot ansehen &amp; Zahlart wählen
           </a>
         </div>
       `;

@@ -60,7 +60,13 @@ interface FolderData {
   installment_fee: number | null;
   installments_paid: number | null;
   next_payment_date: string | null;
+  payment_token: string;
 }
+
+// Customer-facing portal URL. The token is permanent per folder; the customer
+// chooses one-time vs. installment plan on the page, then Stripe takes over.
+const PORTAL_BASE = 'https://clairmont-advisory.com/pay';
+const buildPortalUrl = (token: string) => `${PORTAL_BASE}?t=${token}`;
 
 interface Document {
   id: string;
@@ -581,15 +587,15 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
     }
   };
 
-  const handlePrognoseUpdated = (amount: number, installmentCount: number, installmentFee: number) => {
+  const handlePrognoseUpdated = (amount: number) => {
     if (selectedFolder) {
-      setSelectedFolder({ 
-        ...selectedFolder, 
+      setSelectedFolder({
+        ...selectedFolder,
         prognose_amount: amount,
         prognose_created_at: new Date().toISOString(),
         status: 'prognose_erstellt',
-        installment_count: installmentCount,
-        installment_fee: installmentFee,
+        installment_count: 1,
+        installment_fee: 0,
       });
       fetchFolders();
     }
@@ -599,8 +605,8 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
     if (!selectedFolder?.prognose_amount || !selectedFolder?.customer_email) {
       toast({
         title: 'Fehler',
-        description: selectedFolder?.customer_email 
-          ? 'Bitte erstelle zuerst eine Prognose.' 
+        description: selectedFolder?.customer_email
+          ? 'Bitte erstelle zuerst eine Prognose.'
           : 'Keine E-Mail-Adresse hinterlegt.',
         variant: 'destructive',
       });
@@ -609,45 +615,39 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
 
     setIsGeneratingPaymentLink(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-payment-link', {
-        body: {
-          folderId: selectedFolder.id,
-          customerName: selectedFolder.customer_name,
-          customerEmail: selectedFolder.customer_email,
-          prognoseAmount: selectedFolder.prognose_amount,
-          installmentCount: selectedFolder.installment_count || 1,
-          installmentFee: selectedFolder.installment_fee || 0,
-        },
-      });
+      // Customer picks one-time vs. installments themselves on the portal.
+      // We only mark the folder as "Angebot gesendet" and refresh the timestamp.
+      const { error } = await supabase
+        .from('folders')
+        .update({
+          status: 'angebot_gesendet',
+          prognose_created_at: new Date().toISOString(),
+        })
+        .eq('id', selectedFolder.id);
 
       if (error) throw error;
 
-      // Update local state with payment info
       setSelectedFolder({
         ...selectedFolder,
-        payment_link_url: data.url,
-        payment_status: 'pending',
         status: 'angebot_gesendet',
+        prognose_created_at: new Date().toISOString(),
       });
 
-      // Open email dialog in offer mode
+      // Open email dialog with the portal URL as the CTA target.
       setIsOfferMode(true);
       setIsEmailOpen(true);
-      
-      const installmentInfo = data.installmentCount > 1 
-        ? ` (${data.installmentCount} Raten)` 
-        : '';
+
       toast({
-        title: 'Zahlungslink erstellt',
-        description: `Gesamtgebühr: ${data.totalFee.toFixed(2)} €${installmentInfo}`,
+        title: 'Angebot bereit',
+        description: 'Passen Sie die E-Mail an und senden Sie sie ab.',
       });
-      
+
       fetchFolders();
     } catch (error) {
-      console.error('Error creating payment link:', error);
+      console.error('Error preparing offer:', error);
       toast({
         title: 'Fehler',
-        description: 'Der Zahlungslink konnte nicht erstellt werden.',
+        description: 'Das Angebot konnte nicht vorbereitet werden.',
         variant: 'destructive',
       });
     } finally {
@@ -821,14 +821,14 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
               </Button>
             )}
 
-            {/* Payment link actions */}
-            {selectedFolder.payment_link_url && (
+            {/* Payment portal actions — shown once an offer has been prepared */}
+            {(selectedFolder.status === 'angebot_gesendet' || selectedFolder.payment_status) && (
               <>
                 <Button
                   variant="outline"
                   size="sm"
                   className="border-border"
-                  onClick={() => window.open(selectedFolder.payment_link_url!, '_blank', 'noopener,noreferrer')}
+                  onClick={() => window.open(buildPortalUrl(selectedFolder.payment_token), '_blank', 'noopener,noreferrer')}
                 >
                   <ExternalLink className="w-4 h-4" />
                 </Button>
@@ -838,7 +838,7 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
                   className="border-border"
                   onClick={async () => {
                     try {
-                      await navigator.clipboard.writeText(selectedFolder.payment_link_url!);
+                      await navigator.clipboard.writeText(buildPortalUrl(selectedFolder.payment_token));
                       toast({ title: 'Zahlungslink kopiert' });
                     } catch (e) {
                       toast({
@@ -1031,7 +1031,7 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
           folderName={selectedFolder.name}
           isOfferMode={isOfferMode}
           prognoseAmount={selectedFolder.prognose_amount}
-          paymentLinkUrl={selectedFolder.payment_link_url}
+          paymentLinkUrl={isOfferMode ? buildPortalUrl(selectedFolder.payment_token) : null}
           onEmailSent={handleEmailSent}
         />
         
@@ -1042,7 +1042,6 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
           folderId={selectedFolder.id}
           customerName={selectedFolder.customer_name}
           currentPrognose={selectedFolder.prognose_amount}
-          currentInstallments={selectedFolder.installment_count}
           onPrognoseUpdated={handlePrognoseUpdated}
         />
 

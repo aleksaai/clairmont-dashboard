@@ -50,11 +50,12 @@ export function EmailDialog({
   // Auto-generate offer email when in offer mode
   const handleGenerateOfferEmail = async () => {
     if (!prognoseAmount) return;
-    
+
     const feeAmount = prognoseAmount * 0.30;
-    // Do NOT include the payment link in the prompt - it will be added as a CTA button by send-email
-    const offerPrompt = `Erstelle ein Angebot für den Kunden. Die Prognose für die Steuererstattung beträgt ${prognoseAmount.toFixed(2)} €. Die Beratungsgebühr beträgt ${feeAmount.toFixed(2)} € (30% der Erstattung). Erwähne, dass der Kunde bequem über den Button in dieser E-Mail bezahlen kann. Füge KEINEN Link ein - der Zahlungs-Button wird automatisch hinzugefügt.`;
-    
+    // The customer picks one-time vs. installments themselves on the portal.
+    // Do NOT include any link in the prompt — the CTA button is added by send-email.
+    const offerPrompt = `Erstelle ein Angebot für den Kunden. Die geschätzte Steuererstattung beträgt ${prognoseAmount.toFixed(2)} €. Die Beratungsgebühr beträgt ${feeAmount.toFixed(2)} € (30% der Erstattung). Wichtig: Der Kunde kann auf der verlinkten Zahlungsseite selbst zwischen Einmalzahlung und Ratenzahlung wählen — erwähne diese Wahlmöglichkeit klar und freundlich. Nenne KEINE konkrete monatliche Rate oder konkrete Ratenzahl, das sieht der Kunde direkt auf der Zahlungsseite. Füge KEINEN Link ein — der Button "Angebot ansehen" wird automatisch hinzugefügt.`;
+
     setAiPrompt(offerPrompt);
     
     setIsGenerating(true);
@@ -167,17 +168,15 @@ export function EmailDialog({
 
     setIsSending(true);
     try {
-      const feeAmount = prognoseAmount ? prognoseAmount * 0.30 : undefined;
-      
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           to: customerEmail,
           subject,
           message,
           customerName,
-          // Only include payment link for offer emails
+          // The portal URL is permanent (token-based); the customer picks the
+          // payment plan there, so we no longer pass a fee amount for the button.
           paymentLinkUrl: isOfferMode ? paymentLinkUrl : undefined,
-          feeAmount: isOfferMode ? feeAmount : undefined,
         },
       });
 
