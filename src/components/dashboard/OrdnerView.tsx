@@ -616,20 +616,30 @@ export function OrdnerView({ searchFolderId, onSearchConsumed }: OrdnerViewProps
     setIsGeneratingPaymentLink(true);
     try {
       // Customer picks one-time vs. installments themselves on the portal.
-      // We only mark the folder as "Angebot gesendet" and refresh the timestamp.
+      // We refresh the timestamp + bump status to 'angebot_gesendet' — but ONLY
+      // if the folder hasn't already moved past it. Resending an offer to a
+      // customer who has already paid (e.g. for a follow-up installment) must
+      // NEVER regress the status back to 'angebot_gesendet'.
+      const advancedStates: CaseStatus[] = ['anzahlung_erhalten', 'bezahlt', 'abgeschickt', 'einspruch', 'einspruch_nacharbeit', 'rueckstand', 'abgeschlossen'];
+      const shouldBumpStatus = !selectedFolder.status || !advancedStates.includes(selectedFolder.status);
+
+      const updatePayload: { status?: CaseStatus; prognose_created_at: string } = {
+        prognose_created_at: new Date().toISOString(),
+      };
+      if (shouldBumpStatus) {
+        updatePayload.status = 'angebot_gesendet';
+      }
+
       const { error } = await supabase
         .from('folders')
-        .update({
-          status: 'angebot_gesendet',
-          prognose_created_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', selectedFolder.id);
 
       if (error) throw error;
 
       setSelectedFolder({
         ...selectedFolder,
-        status: 'angebot_gesendet',
+        ...(shouldBumpStatus ? { status: 'angebot_gesendet' } : {}),
         prognose_created_at: new Date().toISOString(),
       });
 

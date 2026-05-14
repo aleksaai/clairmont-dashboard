@@ -335,22 +335,27 @@ serve(async (req) => {
       }
     }
 
-    // Handle invoice.paid - recurring payment successful (for installments after the first)
+    // Handle invoice.paid — both the first subscription invoice
+    // (`subscription_create`) AND each recurring one (`subscription_cycle`).
+    // The old code skipped `subscription_create` because `checkout.session.completed`
+    // was expected to handle the first payment — but Stripe sometimes fires the
+    // session event with payment_status=unpaid (because the PaymentIntent is
+    // still confirming). Belt-and-suspenders: handle the first invoice here too.
     if (event.type === "invoice.paid") {
       const invoice = event.data.object as Stripe.Invoice;
-      
-      // Only process subscription invoices that are not the first one
-      if (invoice.billing_reason === "subscription_cycle" && invoice.subscription) {
-        logStep("Subscription invoice paid", { 
-          invoiceId: invoice.id, 
+      const reason = invoice.billing_reason;
+
+      if ((reason === "subscription_cycle" || reason === "subscription_create") && invoice.subscription) {
+        logStep("Subscription invoice paid", {
+          invoiceId: invoice.id,
           subscriptionId: invoice.subscription,
-          billingReason: invoice.billing_reason,
-          metadata: invoice.subscription_details?.metadata 
+          billingReason: reason,
+          metadata: invoice.subscription_details?.metadata,
         });
 
         const folderId = invoice.subscription_details?.metadata?.folder_id;
         const installmentCount = parseInt(invoice.subscription_details?.metadata?.installment_count || "1", 10);
-        
+
         if (folderId && installmentCount > 1) {
           const supabaseClient = createClient(
             Deno.env.get("SUPABASE_URL") ?? "",
@@ -358,26 +363,39 @@ serve(async (req) => {
             { auth: { persistSession: false } }
           );
 
-          // Get current installments_paid
+          // Read current state to count idempotently.
           const { data: folderData } = await supabaseClient
             .from("folders")
-            .select("installments_paid")
+            .select("installments_paid, status")
             .eq("id", folderId)
             .maybeSingle();
 
-          const currentPaid = folderData?.installments_paid || 1;
-          const newPaid = currentPaid + 1;
+          // For `subscription_create`: bump from 0 → 1. For `subscription_cycle`:
+          // increment whatever's there. checkout.session.completed may have
+          // already set 1 — re-firing must not double-count.
+          const currentPaid = folderData?.installments_paid ?? 0;
+          const newPaid = reason === "subscription_create"
+            ? Math.max(currentPaid, 1)
+            : currentPaid + 1;
 
-          // Calculate next payment date
+          // No-op if nothing changed (Stripe webhook retries).
+          if (newPaid === currentPaid && folderData?.status &&
+              (folderData.status === "anzahlung_erhalten" || folderData.status === "bezahlt")) {
+            logStep("Idempotent skip", { folderId, currentPaid, newPaid });
+            return new Response(JSON.stringify({ received: true, skipped: true }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 200,
+            });
+          }
+
+          const isLastInstallment = newPaid >= installmentCount;
           const nextDate = new Date();
           nextDate.setMonth(nextDate.getMonth() + 1);
-
-          // Check if this is the last installment
-          const isLastInstallment = newPaid >= installmentCount;
 
           const { error: updateError } = await supabaseClient
             .from("folders")
             .update({
+              payment_status: "paid",
               installments_paid: newPaid,
               next_payment_date: isLastInstallment ? null : nextDate.toISOString(),
               status: isLastInstallment ? "bezahlt" : "anzahlung_erhalten",
@@ -387,13 +405,33 @@ serve(async (req) => {
           if (updateError) {
             logStep("Error updating installment count", { error: updateError.message });
           } else {
-            logStep("Installment count updated", { 
-              folderId, 
-              installmentsPaid: newPaid, 
+            logStep("Installment count updated", {
+              folderId,
+              billingReason: reason,
+              installmentsPaid: newPaid,
               totalInstallments: installmentCount,
-              isLastInstallment 
+              isLastInstallment,
             });
           }
+        }
+
+        // One-time payments paid through an invoice (rare with our flow but safe).
+        if (folderId && installmentCount === 1) {
+          const supabaseClient = createClient(
+            Deno.env.get("SUPABASE_URL") ?? "",
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+            { auth: { persistSession: false } }
+          );
+          const { error: updateError } = await supabaseClient
+            .from("folders")
+            .update({
+              payment_status: "paid",
+              status: "bezahlt",
+              installments_paid: 1,
+            })
+            .eq("id", folderId);
+          if (updateError) logStep("Error updating one-time invoice", { error: updateError.message });
+          else logStep("One-time invoice marked paid", { folderId });
         }
       }
     }
