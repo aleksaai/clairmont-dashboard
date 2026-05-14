@@ -89,9 +89,11 @@ serve(async (req) => {
       
       logStep("Creating subscription for installments", { installmentCount, perInstallmentAmount });
 
-      // Create a price for the installment payments
+      // Create a price for the installment payments.
+      // Compliance: never use the word "Steuerberatung" / "Steuerberater" in
+      // customer-facing copy — Clairmont is not a certified tax advisor.
       const product = await stripe.products.create({
-        name: `Steuerberatungsgebühr für ${customerName}`,
+        name: `Beratungsgebühr für ${customerName}`,
         description: `Ratenzahlung: ${installmentCount} Raten à ${(perInstallmentAmount / 100).toFixed(2)} € (Erstattungsprognose: ${prognoseAmount.toFixed(2)} €)`,
       });
 
@@ -143,7 +145,9 @@ serve(async (req) => {
       logStep("Subscription checkout session created", { sessionId: session.id, url: session.url });
 
     } else {
-      // One-time payment (original flow)
+      // One-time payment (original flow).
+      // Compliance: never use "Steuerberatung" / "Steuerberater" in customer-
+      // facing copy — Clairmont is not a certified tax advisor.
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         customer_email: customerId ? undefined : customerEmail || undefined,
@@ -152,7 +156,7 @@ serve(async (req) => {
             price_data: {
               currency: "eur",
               product_data: {
-                name: "Steuerberatungsgebühr",
+                name: "Beratungsgebühr",
                 description: `Beratungsgebühr für ${customerName} (30% der geschätzten Erstattung von ${prognoseAmount.toFixed(2)} €)`,
               },
               unit_amount: totalFeeCents,

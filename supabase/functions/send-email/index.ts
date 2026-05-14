@@ -8,6 +8,37 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Compliance hard filter — Clairmont is not a certified tax advisor and may
+// not use the protected term "Steuerberatung" / "Steuerberater" in any form
+// in customer-facing communication. This is the last line of defence: it
+// runs on subject AND message right before the email is dispatched, so it
+// catches both AI hallucinations and manual typing by sales staff.
+function sanitizeForbiddenTerms(input: string): string {
+  if (!input) return input;
+  // Longest matches first — Steuerberatungs > Steuerberatung; Steuerberaterinnen > Steuerberaterin etc.
+  const rules: Array<[RegExp, string | ((m: string, s: string) => string)]> = [
+    [/Steuerberatungs/g, "Beratungs"],
+    [/steuerberatungs/g, "beratungs"],
+    [/Steuerberatung(en|s)?/g, (_m, s: string) => `Beratung${s || ""}`],
+    [/steuerberatung(en|s)?/g, (_m, s: string) => `beratung${s || ""}`],
+    [/Steuerberaterinnen/g, "Steuerexpertinnen"],
+    [/steuerberaterinnen/g, "steuerexpertinnen"],
+    [/Steuerberaterin/g, "Steuerexpertin"],
+    [/steuerberaterin/g, "steuerexpertin"],
+    [/Steuerberater[ns]/g, "Steuerexperten"],
+    [/steuerberater[ns]/g, "steuerexperten"],
+    [/Steuerberater/g, "Steuerexperte"],
+    [/steuerberater/g, "steuerexperte"],
+    [/Steuerberatend/g, "Beratend"],
+    [/steuerberatend/g, "beratend"],
+  ];
+  let out = input;
+  for (const [re, repl] of rules) {
+    out = out.replace(re, repl as never);
+  }
+  return out;
+}
+
 interface EmailRequest {
   to: string;
   subject: string;
@@ -27,7 +58,15 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { to, subject, message, customerName, paymentLinkUrl }: EmailRequest = await req.json();
+    const raw: EmailRequest = await req.json();
+    const { to, customerName, paymentLinkUrl } = raw;
+
+    // Hard compliance filter — runs on subject + body before anything else.
+    const subject = sanitizeForbiddenTerms(raw.subject);
+    const message = sanitizeForbiddenTerms(raw.message);
+    if (subject !== raw.subject || message !== raw.message) {
+      console.warn("[compliance] sanitized 'Steuerberatung*' term(s) before sending");
+    }
 
     console.log(`Sending email to: ${to}, subject: ${subject}`);
     console.log(`Payment link included: ${!!paymentLinkUrl}`);
