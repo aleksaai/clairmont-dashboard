@@ -13,6 +13,36 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
 };
 
+const SERVICE_EMAIL = "service@clairmont-advisory.com";
+
+// Recipient policy (Aleksa, 2026-05-14):
+// - First payment (one-time OR first installment): service@ + assigned vertriebler
+// - Recurring installments (success or failure): service@ only
+async function getFirstPaymentRecipients(
+  supabaseClient: ReturnType<typeof createClient>,
+  folderId: string,
+): Promise<string[]> {
+  const recipients = new Set<string>([SERVICE_EMAIL]);
+  try {
+    const { data: folder } = await supabaseClient
+      .from("folders")
+      .select("assigned_to")
+      .eq("id", folderId)
+      .maybeSingle();
+    if (folder?.assigned_to) {
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("email")
+        .eq("id", folder.assigned_to)
+        .maybeSingle();
+      if (profile?.email) recipients.add(profile.email);
+    }
+  } catch (e) {
+    logStep("Could not resolve assigned vertriebler — falling back to service@ only", { error: String(e) });
+  }
+  return Array.from(recipients);
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -181,8 +211,9 @@ serve(async (req) => {
               ? (parseFloat(feeAmount) / installmentCount).toFixed(2).replace('.', ',') 
               : null;
             
-            const teamEmail = "service@clairmont-advisory.com";
-            
+            // First-payment recipients: service@ + assigned vertriebler
+            const teamRecipients = await getFirstPaymentRecipients(supabaseClient, folderId);
+
             // Email to team
             const teamEmailHtml = `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -247,7 +278,7 @@ serve(async (req) => {
 
             const { error: teamEmailError } = await resend.emails.send({
               from: "Clairmont Advisory <noreply@tax.clairmont-advisory.com>",
-              to: [teamEmail],
+              to: teamRecipients,
               subject: `✓ Zahlung eingegangen: ${customerName || 'Kunde'}`,
               html: teamEmailHtml,
             });
@@ -255,7 +286,7 @@ serve(async (req) => {
             if (teamEmailError) {
               logStep("Error sending team notification email", { error: teamEmailError });
             } else {
-              logStep("Team notification email sent successfully", { to: teamEmail });
+              logStep("Team notification email sent successfully", { to: teamRecipients });
             }
 
             // Email to customer (confirmation)
@@ -413,6 +444,87 @@ serve(async (req) => {
               isLastInstallment,
             });
           }
+
+          // Email notifications.
+          // First-rate fallback (subscription_create): only fires if checkout.session
+          // didn't already handle the email path. We detect that by checking whether
+          // currentPaid was 0 before this event — if it was, then checkout.session.
+          // completed never sent the team email, so we send it now.
+          // Recurring (subscription_cycle): always service@ only.
+          if (resendApiKey && !updateError) {
+            try {
+              const resend = new Resend(resendApiKey);
+              const meta = invoice.subscription_details?.metadata || {};
+              const customerName = meta.customer_name || "Kunde";
+              const prognoseAmount = meta.prognose_amount;
+              const totalFee = meta.total_fee;
+              const formattedPrognose = prognoseAmount ? parseFloat(prognoseAmount).toFixed(2).replace('.', ',') : 'N/A';
+              const formattedFee = totalFee ? parseFloat(totalFee).toFixed(2).replace('.', ',') : 'N/A';
+              const installmentAmount = totalFee
+                ? (parseFloat(totalFee) / installmentCount).toFixed(2).replace('.', ',')
+                : 'N/A';
+
+              const isFirstRateFallback = reason === "subscription_create" && currentPaid === 0;
+
+              if (isFirstRateFallback) {
+                // Same notification shape as checkout.session.completed:
+                // service@ + assigned vertriebler.
+                const teamRecipients = await getFirstPaymentRecipients(supabaseClient, folderId);
+                const html = `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #16a34a;">✓ Zahlung eingegangen (1. Rate)</h2>
+                    <p>Der Kunde <strong>${customerName}</strong> hat die erste Rate bezahlt.</p>
+                    <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0;">
+                      <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Kunde:</td><td style="padding: 6px 0; font-weight: 600;">${customerName}</td></tr>
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Prognose:</td><td style="padding: 6px 0; font-weight: 600;">${formattedPrognose} €</td></tr>
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Zahlungsart:</td><td style="padding: 6px 0; font-weight: 600;">Ratenzahlung (${installmentCount} Monate)</td></tr>
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Gesamtgebühr:</td><td style="padding: 6px 0; font-weight: 600;">${formattedFee} €</td></tr>
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Gezahlte 1. Rate:</td><td style="padding: 6px 0; color: #16a34a; font-weight: 600;">${installmentAmount} € ✓</td></tr>
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Status:</td><td style="padding: 6px 0; color: #16a34a; font-weight: 600;">Anzahlung erhalten ✓</td></tr>
+                      </table>
+                    </div>
+                    <p style="font-size: 13px; color: #6b7280;">Der Fall wurde automatisch auf "Anzahlung erhalten" gesetzt.</p>
+                  </div>`;
+                const { error: e } = await resend.emails.send({
+                  from: "Clairmont Advisory <noreply@tax.clairmont-advisory.com>",
+                  to: teamRecipients,
+                  subject: `✓ Zahlung eingegangen: ${customerName}`,
+                  html,
+                });
+                if (e) logStep("Error sending first-rate fallback team email", { error: e });
+                else logStep("First-rate fallback team email sent", { to: teamRecipients });
+              } else if (reason === "subscription_cycle") {
+                // Recurring rate — only service@.
+                const html = `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #16a34a;">✓ Rate ${newPaid} von ${installmentCount} eingegangen</h2>
+                    <p>Folgerate von <strong>${customerName}</strong> wurde erfolgreich abgebucht.</p>
+                    <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0;">
+                      <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Kunde:</td><td style="padding: 6px 0; font-weight: 600;">${customerName}</td></tr>
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Rate:</td><td style="padding: 6px 0; font-weight: 600;">${newPaid} von ${installmentCount}</td></tr>
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Betrag:</td><td style="padding: 6px 0; color: #16a34a; font-weight: 600;">${installmentAmount} €</td></tr>
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Status:</td><td style="padding: 6px 0; font-weight: 600;">${isLastInstallment ? 'Bezahlt ✓' : 'Anzahlung erhalten'}</td></tr>
+                      </table>
+                    </div>
+                  </div>`;
+                const { error: e } = await resend.emails.send({
+                  from: "Clairmont Advisory <noreply@tax.clairmont-advisory.com>",
+                  to: [SERVICE_EMAIL],
+                  subject: isLastInstallment
+                    ? `✓ Letzte Rate eingegangen: ${customerName}`
+                    : `✓ Rate ${newPaid}/${installmentCount} eingegangen: ${customerName}`,
+                  html,
+                });
+                if (e) logStep("Error sending recurring rate team email", { error: e });
+                else logStep("Recurring rate team email sent", { to: SERVICE_EMAIL, rate: newPaid });
+              }
+            } catch (emailErr) {
+              logStep("Error in invoice.paid email block", { error: String(emailErr) });
+              // Don't throw — email is not critical
+            }
+          }
         }
 
         // One-time payments paid through an invoice (rare with our flow but safe).
@@ -537,6 +649,31 @@ serve(async (req) => {
           } catch (emailErr) {
             const errorMessage = emailErr instanceof Error ? emailErr.message : String(emailErr);
             logStep("Error sending payment failed email", { error: errorMessage });
+          }
+        }
+
+        // Team notification — service@ only (per recipient policy for recurring events).
+        if (resendApiKey) {
+          try {
+            const resend = new Resend(resendApiKey);
+            const amountDue = invoice.amount_due ? (invoice.amount_due / 100).toFixed(2).replace('.', ',') : 'N/A';
+            const teamHtml = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #dc2626;">⚠️ Zahlung fehlgeschlagen</h2>
+                <p>Die letzte Rate von <strong>${customerName || 'Kunde'}</strong> über <strong>${amountDue} €</strong> konnte nicht abgebucht werden.</p>
+                <p style="color: #6b7280;">Der Fall wurde automatisch auf "Rückstand" gesetzt. Stripe versucht die Zahlung automatisch erneut.</p>
+                <p style="color: #6b7280; font-size: 13px;">Der Kunde wurde per separater E-Mail informiert.</p>
+              </div>`;
+            const { error: e } = await resend.emails.send({
+              from: "Clairmont Advisory <noreply@tax.clairmont-advisory.com>",
+              to: [SERVICE_EMAIL],
+              subject: `⚠️ Zahlung fehlgeschlagen: ${customerName || 'Kunde'}`,
+              html: teamHtml,
+            });
+            if (e) logStep("Error sending payment-failed team email", { error: e });
+            else logStep("Payment-failed team email sent", { to: SERVICE_EMAIL });
+          } catch (emailErr) {
+            logStep("Error in payment-failed team email block", { error: String(emailErr) });
           }
         }
       }
